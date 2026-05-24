@@ -1,0 +1,63 @@
+{
+  "tabs": {
+    "table": "Таблица",
+    "harmony": "Гармония",
+    "saved": "Сохранённые"
+  },
+  "table": {
+    "mode_major": "Мажор",
+    "mode_minor": "Минор",
+    "all_keys": "Все",
+    "common_progressions": "Типичные прогрессии",
+    "key_label": "Тональность",
+    "degree_headers_major": "I (Мажор),ii (минор),iii (минор),IV (Мажор),V (Мажор),vi (минор),vii° (ум.)",
+    "degree_headers_minor": "i (минор),ii° (ум.),III (Мажор),iv (минор),v (минор),VI (Мажор),VII (Мажор)"
+  },
+  "harmony": {
+    "name_placeholder": "Название гармонии...",
+    "time_signature": "Размер",
+    "clear": "Очистить",
+    "save": "Сохранить",
+    "empty_title": "Пока нет аккордов",
+    "empty_hint": "Выберите аккорды из Таблицы",
+    "chord_count": "{count} аккордов"
+  },
+  "chord_card": {
+    "hidden_label": "позиция скрыта",
+    "patterns": "Паттерны",
+    "hide_patterns": "Скрыть"
+  },
+  "degrees": {
+    "quality_major": "Мажор",
+    "quality_minor": "минор",
+    "quality_dim": "уменьшённый"
+  },
+  "strum_presets": {
+    "quarter_notes": "Четверти",
+    "eighth_notes": "Восьмые",
+    "pop_basic": "Поп базовый",
+    "chuck_down": "Чак ↓",
+    "rasgueado": "Расгеадо",
+    "waltz": "Вальс",
+    "chuck_34": "Чак 3/4"
+  },
+  "settings": {
+    "show_fingering": "Позиции",
+    "hide_fingering": "Скрыто"
+  },
+  "saved": {
+    "title": "Сохранённые гармонии",
+    "empty": "Нет сохранённых гармоний",
+    "empty_hint": "Сохраняйте гармонии из конструктора",
+    "load": "Загрузить",
+    "delete": "Удалить",
+    "chords_count": "{count} аккордов"
+  },
+  "toast": {
+    "chord_added": "{chord} добавлен",
+    "progression_loaded": "Загружена: {name}",
+    "harmony_saved": "Гармония сохранена",
+    "harmony_loaded": "Загружена: {name}",
+    "save_error": "Добавьте название и аккорды"
+  }
+}
