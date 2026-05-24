@@ -1,0 +1,63 @@
+{
+  "tabs": {
+    "table": "Tabla",
+    "harmony": "Armonía",
+    "saved": "Guardadas"
+  },
+  "table": {
+    "mode_major": "Mayor",
+    "mode_minor": "Menor",
+    "all_keys": "Todas",
+    "common_progressions": "Progresiones comunes",
+    "key_label": "Tonalidad",
+    "degree_headers_major": "I (Mayor),ii (menor),iii (menor),IV (Mayor),V (Mayor),vi (menor),vii° (dim)",
+    "degree_headers_minor": "i (menor),ii° (dim),III (Mayor),iv (menor),v (menor),VI (Mayor),VII (Mayor)"
+  },
+  "harmony": {
+    "name_placeholder": "Nombre de la armonía...",
+    "time_signature": "Compás",
+    "clear": "Limpiar",
+    "save": "Guardar",
+    "empty_title": "Sin acordes todavía",
+    "empty_hint": "Selecciona acordes en la Tabla",
+    "chord_count": "{count} acordes"
+  },
+  "chord_card": {
+    "hidden_label": "posición oculta",
+    "patterns": "Patrones",
+    "hide_patterns": "Ocultar"
+  },
+  "degrees": {
+    "quality_major": "Mayor",
+    "quality_minor": "menor",
+    "quality_dim": "disminuido"
+  },
+  "strum_presets": {
+    "quarter_notes": "Negras",
+    "eighth_notes": "Corcheas",
+    "pop_basic": "Pop básico",
+    "chuck_down": "Chuck ↓",
+    "rasgueado": "Rasgueo",
+    "waltz": "Vals",
+    "chuck_34": "Chuck 3/4"
+  },
+  "settings": {
+    "show_fingering": "Posiciones",
+    "hide_fingering": "Oculto"
+  },
+  "saved": {
+    "title": "Armonías guardadas",
+    "empty": "No hay armonías guardadas",
+    "empty_hint": "Guarda armonías desde el constructor",
+    "load": "Cargar",
+    "delete": "Eliminar",
+    "chords_count": "{count} acordes"
+  },
+  "toast": {
+    "chord_added": "{chord} añadido",
+    "progression_loaded": "Cargada: {name}",
+    "harmony_saved": "Armonía guardada",
+    "harmony_loaded": "Cargada: {name}",
+    "save_error": "Añade nombre y acordes"
+  }
+}

@@ -1,0 +1,63 @@
+{
+  "tabs": {
+    "table": "Table",
+    "harmony": "Harmony",
+    "saved": "Saved"
+  },
+  "table": {
+    "mode_major": "Major",
+    "mode_minor": "Minor",
+    "all_keys": "All",
+    "common_progressions": "Common progressions",
+    "key_label": "Key",
+    "degree_headers_major": "I (Major),ii (minor),iii (minor),IV (Major),V (Major),vi (minor),vii° (dim)",
+    "degree_headers_minor": "i (minor),ii° (dim),III (Major),iv (minor),v (minor),VI (Major),VII (Major)"
+  },
+  "harmony": {
+    "name_placeholder": "Harmony name...",
+    "time_signature": "Time",
+    "clear": "Clear",
+    "save": "Save",
+    "empty_title": "No chords yet",
+    "empty_hint": "Select chords from the Table",
+    "chord_count": "{count} chords"
+  },
+  "chord_card": {
+    "hidden_label": "hidden position",
+    "patterns": "Patterns",
+    "hide_patterns": "Hide"
+  },
+  "degrees": {
+    "quality_major": "Major",
+    "quality_minor": "minor",
+    "quality_dim": "diminished"
+  },
+  "strum_presets": {
+    "quarter_notes": "Quarter notes",
+    "eighth_notes": "Eighth notes",
+    "pop_basic": "Basic pop",
+    "chuck_down": "Chuck ↓",
+    "rasgueado": "Rasgueado",
+    "waltz": "Waltz",
+    "chuck_34": "Chuck 3/4"
+  },
+  "settings": {
+    "show_fingering": "Fingering",
+    "hide_fingering": "Hidden"
+  },
+  "saved": {
+    "title": "Saved harmonies",
+    "empty": "No saved harmonies",
+    "empty_hint": "Save harmonies from the builder",
+    "load": "Load",
+    "delete": "Delete",
+    "chords_count": "{count} chords"
+  },
+  "toast": {
+    "chord_added": "{chord} added",
+    "progression_loaded": "Loaded: {name}",
+    "harmony_saved": "Harmony saved",
+    "harmony_loaded": "Loaded: {name}",
+    "save_error": "Add a name and chords"
+  }
+}
