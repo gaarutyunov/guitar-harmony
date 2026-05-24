@@ -1,2 +1,2 @@
-# gprog
+# guitar-harmony
 Guitar progression generator
