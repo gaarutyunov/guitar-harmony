@@ -2,8 +2,10 @@
 
 import { useTranslations } from 'next-intl';
 import { useHarmonyStore } from '@/stores/useHarmonyStore';
+import { usePlaybackStore } from '@/stores/usePlaybackStore';
 import { ChordCard } from './ChordCard';
-import { useState } from 'react';
+import { PlaybackControls } from './PlaybackControls';
+import { useState, useRef, useEffect } from 'react';
 
 export function HarmonyBuilder() {
   const t = useTranslations('harmony');
@@ -15,7 +17,21 @@ export function HarmonyBuilder() {
   const removeChord = useHarmonyStore((s) => s.removeChord);
   const moveChord = useHarmonyStore((s) => s.moveChord);
   const updatePattern = useHarmonyStore((s) => s.updatePattern);
+  const currentChordIndex = usePlaybackStore((s) => s.currentChordIndex);
+  const currentBeat = usePlaybackStore((s) => s.currentBeat);
+  const isPlaying = usePlaybackStore((s) => s.isPlaying);
   const [toast, setToast] = useState<string | null>(null);
+  const chordRefs = useRef<Map<string, HTMLDivElement>>(new Map());
+
+  useEffect(() => {
+    if (!isPlaying || currentChordIndex < 0) return;
+    const chord = current.chords[currentChordIndex];
+    if (!chord) return;
+    const el = chordRefs.current.get(chord.id);
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+  }, [currentChordIndex, isPlaying, current.chords]);
 
   function handleSave() {
     const success = saveHarmony();
@@ -83,6 +99,9 @@ export function HarmonyBuilder() {
         </button>
       </div>
 
+      {/* Playback controls */}
+      <PlaybackControls />
+
       {/* Chord cards */}
       {current.chords.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-20 text-center">
@@ -92,16 +111,25 @@ export function HarmonyBuilder() {
       ) : (
         <div className="space-y-3 pb-4">
           {current.chords.map((chord, idx) => (
-            <ChordCard
+            <div
               key={chord.id}
-              chord={chord}
-              timeSignature={current.timeSignature}
-              isFirst={idx === 0}
-              isLast={idx === current.chords.length - 1}
-              onMove={(dir) => moveChord(chord.id, dir)}
-              onRemove={() => removeChord(chord.id)}
-              onUpdatePattern={(pattern) => updatePattern(chord.id, pattern)}
-            />
+              ref={(el) => {
+                if (el) chordRefs.current.set(chord.id, el);
+                else chordRefs.current.delete(chord.id);
+              }}
+            >
+              <ChordCard
+                chord={chord}
+                timeSignature={current.timeSignature}
+                isFirst={idx === 0}
+                isLast={idx === current.chords.length - 1}
+                onMove={(dir) => moveChord(chord.id, dir)}
+                onRemove={() => removeChord(chord.id)}
+                onUpdatePattern={(pattern) => updatePattern(chord.id, pattern)}
+                isActive={isPlaying && currentChordIndex === idx}
+                activeBeat={isPlaying && currentChordIndex === idx ? currentBeat : -1}
+              />
+            </div>
           ))}
         </div>
       )}

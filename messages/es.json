@@ -53,6 +53,15 @@
     "delete": "Eliminar",
     "chords_count": "{count} acordes"
   },
+  "playback": {
+    "play": "Reproducir",
+    "stop": "Detener",
+    "audio": "Audio",
+    "metronome": "Metrónomo",
+    "loop": "Bucle",
+    "rep": "rep",
+    "bpm": "BPM"
+  },
   "toast": {
     "chord_added": "{chord} añadido",
     "progression_loaded": "Cargada: {name}",
