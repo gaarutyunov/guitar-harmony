@@ -1,0 +1,2 @@
+# gprog
+Guitar progression generator
