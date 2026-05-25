@@ -7,9 +7,13 @@ import { useHarmonyStore } from '@/stores/useHarmonyStore';
 import { chordDatabase } from '@/data/chords';
 import {
   ensureAudioContext,
+  ensureAudioContextSync,
   getChordFrequencies,
   playMetronomeClick,
   playChordStrum,
+  testOscillator,
+  testBuffer,
+  testHtmlAudio,
 } from '@/lib/audio/audio';
 
 export function PlaybackControls() {
@@ -228,6 +232,28 @@ export function PlaybackControls() {
             +
           </button>
         </div>
+      </div>
+
+      {/* Audio debug row */}
+      <div className="flex items-center gap-1 flex-wrap">
+        <button
+          onClick={() => { ensureAudioContextSync(); testOscillator(); }}
+          className="px-2 py-0.5 rounded text-[10px] font-mono bg-rose-500/20 text-rose-400 border border-rose-500/40"
+        >
+          Test:Oscillator
+        </button>
+        <button
+          onClick={() => { ensureAudioContextSync(); testBuffer(); }}
+          className="px-2 py-0.5 rounded text-[10px] font-mono bg-teal-500/20 text-teal-400 border border-teal-500/40"
+        >
+          Test:Buffer
+        </button>
+        <button
+          onClick={() => { testHtmlAudio(); }}
+          className="px-2 py-0.5 rounded text-[10px] font-mono bg-amber-500/20 text-amber-400 border border-amber-500/40"
+        >
+          Test:HTML Audio
+        </button>
       </div>
 
       {/* Settings row */}
