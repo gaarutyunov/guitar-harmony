@@ -9,9 +9,10 @@ interface StrumGridProps {
   pattern: StrumCell[];
   timeSignature: TimeSignature;
   onChange: (pattern: StrumCell[]) => void;
+  activeBeat?: number;
 }
 
-export function StrumGrid({ pattern, timeSignature, onChange }: StrumGridProps) {
+export function StrumGrid({ pattern, timeSignature, onChange, activeBeat = -1 }: StrumGridProps) {
   const t = useTranslations('strum_presets');
   const tCard = useTranslations('chord_card');
   const presets = getPresetsForTimeSignature(timeSignature);
@@ -43,7 +44,11 @@ export function StrumGrid({ pattern, timeSignature, onChange }: StrumGridProps) 
           <div key={i} className="flex items-center">
             <button
               onClick={() => handleCellTap(i)}
-              className={`w-7 h-8 flex items-center justify-center rounded text-base font-mono font-bold transition-colors bg-mahogany-900/60 border border-mahogany-800/40 hover:bg-mahogany-800/60 active:scale-95 ${getCellColor(cell)}`}
+              className={`w-7 h-8 flex items-center justify-center rounded text-base font-mono font-bold transition-colors border active:scale-95 ${
+                activeBeat === i
+                  ? 'bg-amber-500/30 border-amber-500/60 ring-1 ring-amber-400/40'
+                  : 'bg-mahogany-900/60 border-mahogany-800/40 hover:bg-mahogany-800/60'
+              } ${getCellColor(cell)}`}
             >
               {getCellDisplay(cell)}
             </button>

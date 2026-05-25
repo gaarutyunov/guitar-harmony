@@ -53,6 +53,15 @@
     "delete": "Delete",
     "chords_count": "{count} chords"
   },
+  "playback": {
+    "play": "Play",
+    "stop": "Stop",
+    "audio": "Audio",
+    "metronome": "Metronome",
+    "loop": "Loop",
+    "rep": "rep",
+    "bpm": "BPM"
+  },
   "toast": {
     "chord_added": "{chord} added",
     "progression_loaded": "Loaded: {name}",

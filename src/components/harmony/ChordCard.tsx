@@ -14,6 +14,8 @@ interface ChordCardProps {
   onMove: (dir: -1 | 1) => void;
   onRemove: () => void;
   onUpdatePattern: (pattern: StrumCell[]) => void;
+  isActive?: boolean;
+  activeBeat?: number;
 }
 
 export function ChordCard({
@@ -24,12 +26,18 @@ export function ChordCard({
   onMove,
   onRemove,
   onUpdatePattern,
+  isActive = false,
+  activeBeat = -1,
 }: ChordCardProps) {
   const showFingering = useSettingsStore((s) => s.showFingering);
   const quality = getChordQuality(chord.name);
 
   return (
-    <div className="bg-mahogany-900/40 rounded-xl border border-mahogany-800/40 overflow-hidden">
+    <div className={`rounded-xl border overflow-hidden transition-colors ${
+      isActive
+        ? 'bg-mahogany-900/60 border-amber-500/40 ring-1 ring-amber-500/20'
+        : 'bg-mahogany-900/40 border-mahogany-800/40'
+    }`}>
       {/* Header */}
       <div className="flex items-center justify-between px-3 py-2 border-b border-mahogany-800/30">
         <div className="flex items-center gap-2">
@@ -70,6 +78,7 @@ export function ChordCard({
             pattern={chord.strumPattern}
             timeSignature={timeSignature}
             onChange={onUpdatePattern}
+            activeBeat={isActive ? activeBeat : -1}
           />
         </div>
       </div>

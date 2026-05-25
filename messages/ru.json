@@ -53,6 +53,15 @@
     "delete": "Удалить",
     "chords_count": "{count} аккордов"
   },
+  "playback": {
+    "play": "Играть",
+    "stop": "Стоп",
+    "audio": "Аудио",
+    "metronome": "Метроном",
+    "loop": "Повтор",
+    "rep": "повт",
+    "bpm": "BPM"
+  },
   "toast": {
     "chord_added": "{chord} добавлен",
     "progression_loaded": "Загружена: {name}",
