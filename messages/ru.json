@@ -2,7 +2,8 @@
   "tabs": {
     "table": "Таблица",
     "harmony": "Гармония",
-    "saved": "Сохранённые"
+    "saved": "Сохранённые",
+    "songs": "Песни"
   },
   "table": {
     "mode_major": "Мажор",
@@ -61,6 +62,32 @@
     "loop": "Повтор",
     "rep": "повт",
     "bpm": "BPM"
+  },
+  "songs": {
+    "title": "Песни",
+    "search_placeholder": "Поиск по названию или исполнителю...",
+    "search_by_harmony": "Поиск по гармонии",
+    "browse_mode": "Все песни",
+    "difficulty": "Сложность",
+    "genre": "Жанр",
+    "key": "Тональность",
+    "bpm": "BPM",
+    "capo": "Каподастр",
+    "show_filters": "Фильтры",
+    "hide_filters": "Скрыть фильтры",
+    "songs_count": "песен",
+    "no_results": "Песни не найдены",
+    "no_results_hint": "Попробуйте меньше аккордов или другие",
+    "matched_section": "Совпадение",
+    "pick_chords": "Выберите аккорды для поиска...",
+    "clear": "Очистить",
+    "back_to_list": "Назад",
+    "tap_bars": "Нажмите на такты для выбора диапазона",
+    "clear_selection": "Очистить выбор",
+    "extract_section": "Извлечь как гармонию",
+    "extract_selected": "Извлечь выбранные такты",
+    "find_similar": "Найти похожие",
+    "find_songs": "Найти песни"
   },
   "toast": {
     "chord_added": "{chord} добавлен",
