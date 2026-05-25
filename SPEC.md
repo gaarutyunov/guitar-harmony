@@ -297,6 +297,287 @@ This allows building full 8-bar or 12-bar song structures, not just 4-chord loop
 
 -----
 
+-----
+
+## Feature: Songs Library
+
+A fourth navigation tab. Bidirectional: harmony → songs and song → harmony.
+
+-----
+
+### Flow 1 — Harmony → Songs
+
+The user has a harmony (e.g. `Am · F · C · G`). The library finds and ranks all songs that contain those exact chord names, ordered by match score.
+
+**Entry points:**
+
+- From the Harmony tab: a “Find songs” button appears once 2+ chords are in the harmony.
+- From the Songs tab: a “Search by harmony” mode where the user picks chords directly.
+
+**What “match” means:**
+The match is on **chord names as literal tokens** — `Am`, `F`, `C`, `G`. A song that uses `Am · F · C · G` in its chorus is a strong match. A song that uses `Em · C · G · D` (the same relative progression in a different key) does **not** match by default, because the user is learning specific fingering shapes, not abstract patterns. Roman numerals are shown as informational context (`vi–IV–I–V in C major`) but play no role in scoring.
+
+**Scoring algorithm — three components, all operating on chord name strings:**
+
+```
+totalScore = (lcs * 0.55) + (jaccard * 0.25) + (levenshtein * 0.20)
+```
+
+1. **Longest Common Contiguous Substring (LCS) — weight 0.55**
+   Find the longest contiguous run of matching chord names between the query and a song section sequence. Normalize by query length.
+- `["Am","F","C","G"]` vs `["Am","F","C","G","Am","F","C","G"]` → 4/4 = **1.0**
+- `["Am","F","C","G"]` vs `["C","G","Am","F","C","G","Am"]` → 4/4 = **1.0** (rotation)
+- `["Am","F","C","G"]` vs `["Am","F","G","C","D"]` → 2/4 = **0.5**
+1. **Bag-of-chords Jaccard — weight 0.25**
+   Treat both sequences as multisets. Score = `|intersection| / |union|`. Captures songs that use the same chord names in a different order.
+- `{Am,F,C,G}` vs `{Am,F,C,G,G,G}` → 4/5 = **0.8**
+- `{Am,F,C,G}` vs `{Am,C,G,D}` → 3/5 = **0.6**
+1. **Levenshtein edit distance — weight 0.20**
+   Each chord name is one token. Normalized: `1 - editDistance / max(|query|, |section|)`. Penalizes insertions, deletions, substitutions.
+
+**Rarity weighting:** multiply each matching chord’s contribution by its IDF across the corpus. Common chords (`G`, `C`, `Am`, `D`) contribute less; rare chords (`Bdim`, `G#m`, `Bbm`) contribute more. A match on a rare chord is stronger evidence.
+
+**Per-section scoring:** score every section (Verse, Chorus, Bridge…) of every song independently. A song’s final score = its best-matching section score. The winning section label is shown on the result card so the user knows exactly where the progression appears.
+
+**Optional toggle — “Include transpositions”:** off by default. When on, adds a second pass using Roman-numeral normalization to find songs with the same shape in a different key. Transposition matches receive a –0.15 penalty so exact-key matches always rank first.
+
+-----
+
+### Flow 2 — Song → Harmony
+
+The user picks a song first and explores its structure.
+
+**Song detail view:**
+
+- Header: title, artist, key, BPM, difficulty, time signature, genre tags, capo
+- Section tabs: Intro / Verse / Pre-Chorus / Chorus / Bridge / Outro
+- **Timeline:** horizontal scrolling bar grid, one cell per bar
+  - Large text: chord name (`Am`)
+  - Small text below, faded: Roman numeral (`vi`)
+  - Color coding matches the rest of the app (amber/teal/rose)
+  - Tap a cell → chord diagram popover
+- **“Extract as harmony” button:** pushes the current section’s chord list into the Harmony tab
+
+**Bar range selection:** drag across any subset of bars to extract just those chords. Select bars 1–4 of the chorus → those four chords become the current harmony.
+
+**After extraction:** the Harmony tab is pre-populated. The user can swap any chord. A “Find songs” button re-runs Flow 1 immediately — changing one chord surfaces a different set of matching songs. This is the core learning loop: understand why a substitution shifts the song landscape.
+
+-----
+
+### Song data model
+
+```ts
+interface Song {
+  id: string;                         // "beatles-let-it-be"
+  title: string;
+  artist: string;
+  album?: string;
+  year?: number;
+  genres: string[];
+  difficulty: 1 | 2 | 3 | 4 | 5;
+  key: { tonic: string; mode: "major" | "minor" };
+  bpm?: number;
+  timeSignature: [number, number];
+  capo?: number;
+  source: "curated" | "hooktheory" | "user";
+  sections: SongSection[];
+}
+
+interface SongSection {
+  id: string;
+  label: "Intro" | "Verse" | "Pre-Chorus" | "Chorus"
+       | "Bridge" | "Solo" | "Outro" | "Instrumental";
+  index: number;
+  bars: SongBar[];
+  repeatCount?: number;
+  romanNumerals: string[];   // pre-computed at ingest — display only, not used for matching
+}
+
+interface SongBar {
+  chords: string[];          // chord name strings per beat, e.g. ["Am"] or ["Am","F"]
+}
+```
+
+`bars[n].chords` is the **sole source of truth for matching** — plain chord name strings. Roman numerals live in `romanNumerals`, are computed at ingest time, and are never touched by the scoring engine.
+
+-----
+
+### Matching engine — implementation sketch
+
+```ts
+// lib/matching/score.ts
+
+function scoreSection(query: string[], section: SongSection): number {
+  const sectionChords = section.bars.flatMap(b => b.chords);
+
+  const lcs   = longestCommonContiguous(query, sectionChords) / query.length;
+  const jacc  = jaccardMultiset(query, sectionChords);
+  const edit  = 1 - levenshtein(query, sectionChords)
+                    / Math.max(query.length, sectionChords.length);
+
+  const base  = lcs * 0.55 + jacc * 0.25 + edit * 0.20;
+  const boost = idfBoost(query, sectionChords);   // additive, capped at +0.10
+
+  return Math.min(1, base + boost);
+}
+
+function rankSongs(query: string[], corpus: Song[]): SongMatch[] {
+  return corpus
+    .flatMap(song =>
+      song.sections.map(s => ({ song, section: s, score: scoreSection(query, s) }))
+    )
+    .filter(m => m.score > 0.25)
+    .sort((a, b) => b.score - a.score)
+    .reduce<SongMatch[]>((acc, m) => {
+      // keep only best-scoring section per song
+      if (!acc.find(x => x.song.id === m.song.id)) acc.push(m);
+      return acc;
+    }, []);
+}
+```
+
+Runs synchronously in-browser for ≤ 500 songs (< 10 ms). Move to a Web Worker for corpora > 2 000.
+
+-----
+
+### Songs tab UI
+
+**List view:**
+
+- Search bar — free-text by title or artist (`minisearch`, client-side fuzzy)
+- Filter chips: Difficulty · Genre · Key · Time Signature · Capo Y/N
+- Song cards (virtualized via `@tanstack/react-virtual`):
+  - Title + artist · key badge · BPM · difficulty dots (●●○○○)
+  - Genre tags
+  - Match score bar + matched section label (shown when arriving from a harmony search)
+  - Tap → song detail view
+
+**“Search by harmony” mode:**
+
+- Compact chord-picker strip using the same chord names from the progression tables
+- Results update in real time as chords are added or removed
+- Score shown prominently on each card
+
+-----
+
+### Stack additions for Songs Library
+
+|Concern                      |Package                                |Notes                                                                                                                                      |
+|-----------------------------|---------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------|
+|**Matching engine**          |**Rust + `wasm-pack` + `wasm-bindgen`**|**Compiled to WASM, runs in a Web Worker. All algorithm code lives here — no TypeScript fallback for matching.**                           |
+|**Worker RPC**               |**`comlink`**                          |**Ergonomic async proxy over `postMessage`. `Comlink.wrap<MatcherAPI>(worker)` turns every Rust export into a typed `Promise`.**           |
+|Serde (Rust→JS boundary)     |`serde-wasm-bindgen` 0.6 + `serde_json`|Corpus sent once as JSON string, deserialized in Rust via `serde_json::from_str`. Results returned via `serde_wasm_bindgen::to_value`.     |
+|TypeScript type generation   |`tsify` (or `tsify-next`)              |`#[derive(Tsify)]` on Rust structs auto-generates `.d.ts` — no hand-written TS interfaces for `Song`/`SongSection`/`SongBar`/`MatchResult`.|
+|Music theory (Rust, optional)|`rust-music-theory` 0.3                |Roman-numeral normalization for the “include transpositions” second pass.                                                                  |
+|String distance (Rust)       |`strsim` 0.11                          |`generic_levenshtein(&[T], &[T])` works on chord-name token slices. **Do not use `triple_accel` — it only accepts `&[u8]` bytes.**         |
+|Hash maps (Rust)             |`ahash` 0.8                            |`AHashMap` for IDF counts and Jaccard multiset — ~1.5–2× faster than `std::HashMap` on non-adversarial string keys.                        |
+|Chord-sheet parsing (ingest) |`chordsheetjs`                         |Parses `.cho` ChordPro files at build time only                                                                                            |
+|Roman numerals (display)     |`tonal` — `@tonaljs/progression`       |`toRomanNumerals()` at ingest, stored in `SongSection.romanNumerals`. Never called at query time.                                          |
+|Full-text search             |`minisearch`                           |Client-side title + artist fuzzy search, runs on the main thread                                                                           |
+|List virtualization          |`@tanstack/react-virtual`              |Song list + bar timeline grid                                                                                                              |
+|Live enrichment              |Hooktheory Trends API                  |“Songs containing this progression” fallback when local corpus has < 20 matches                                                            |
+
+**Key decisions baked into this stack:**
+
+- `--target web` (not `bundler`, not `no-modules`) — the only wasm-pack target that works reliably inside a Web Worker in Next.js 14 with Webpack 5.
+- The corpus is loaded into the worker **once** via `loadCorpus(json)` and cached as a `Vec<Song>` in a `thread_local! OnceCell<Matcher>`. Each `match(query, topK)` call pays only the cost of the algorithm loop, not deserialization.
+- `asyncWebAssembly: true` must be set in `next.config.mjs`’s `webpack()` callback or Webpack 5 throws a parse error on the `.wasm` binary.
+- Workers must be created inside `useEffect` in a `"use client"` component — `Worker` is `undefined` during SSR.
+- No `SharedArrayBuffer` / COOP / COEP headers needed for a single-threaded matcher.
+
+### Project structure additions
+
+```
+# Rust WASM crate — lives outside the Next.js app as a workspace package
+/packages/matcher-wasm/
+  Cargo.toml                           ← crate-type = ["cdylib","rlib"]; wasm-pack metadata
+  src/
+    lib.rs                             ← #[wasm_bindgen] exports: set_corpus(), match_songs()
+    types.rs                           ← Song, SongSection, SongBar, MatchResult
+                                          (#[derive(Tsify, Serialize, Deserialize)])
+    matcher.rs                         ← Matcher struct, new(), rank(); thread_local! OnceCell
+    algos/
+      lcs.rs                           ← lccs<T: Eq>(a: &[T], b: &[T]) → usize
+      jaccard.rs                       ← multiset_jaccard using AHashMap
+      levenshtein.rs                   ← strsim::generic_levenshtein wrapper, normalized to [0,1]
+      idf.rs                           ← IDF pre-computation at Matcher::new(), AHashMap<String,f32>
+    roman.rs                           ← optional: chord → Roman numeral via rust-music-theory
+  pkg/                                 ← wasm-pack output (gitignored)
+    matcher_wasm.js                    ← JS glue; exposes init(), set_corpus(), match_songs()
+    matcher_wasm_bg.wasm
+    matcher_wasm.d.ts                  ← auto-generated by tsify
+    package.json                       ← name: "matcher-wasm", referenced by Next.js workspace
+
+# Next.js app
+/app
+  /(app)/songs/page.tsx                ← list + harmony search ("use client")
+  /(app)/songs/[id]/page.tsx           ← song detail + timeline ("use client")
+
+/workers
+  matcher.worker.ts                    ← imports init + set_corpus + match_songs from matcher-wasm
+                                          exposes { loadCorpus, match } via Comlink
+
+/components/songs
+  SongList.tsx
+  SongCard.tsx                         ← shows match score bar + matched section label
+  SongFilters.tsx
+  HarmonySearchBar.tsx                 ← chord-picker strip for Flow 1
+  SongChart/
+    SongChart.tsx
+    SectionTimeline.tsx                ← horizontal scrolling bar grid
+    BarCell.tsx                        ← chord name (large) + Roman numeral (small, faded)
+    ChordChip.tsx                      ← tap → ChordDiagram popover
+    BarRangeSelector.tsx               ← drag to extract harmony
+
+/lib
+  /songs
+    ingest.ts                          ← ChordPro → Song JSON + pre-compute romanNumerals (build-time)
+    corpus.ts                          ← loads + validates songs.json at runtime
+  /workers
+    useMatcher.ts                      ← custom hook: creates Worker + Comlink proxy in useEffect,
+                                          exposes { loadCorpus, match, isReady }
+
+/data/songs
+  songs.json                           ← curated corpus (~200 KB gzipped for 500 songs)
+  songs.schema.ts                      ← Zod schema (mirrors Rust types.rs exactly)
+  /raw                                 ← source .cho ChordPro files, one per song
+```
+
+**Worker file (`workers/matcher.worker.ts`):**
+
+```ts
+import * as Comlink from "comlink";
+import init, { set_corpus, match_songs } from "matcher-wasm";
+
+let ready: Promise<unknown> | null = null;
+
+const api = {
+  async loadCorpus(json: string) {
+    if (!ready) ready = init();        // fetch + instantiate the .wasm once
+    await ready;
+    set_corpus(json);                  // deserialize corpus into Rust Vec<Song>
+  },
+  async match(query: string[], topK: number) {
+    if (!ready) ready = init();
+    await ready;
+    return match_songs(query, topK);   // returns MatchResult[]
+  },
+};
+
+export type MatcherAPI = typeof api;
+Comlink.expose(api);
+```
+
+**`next.config.mjs` addition (required):**
+
+```js
+webpack: (config) => {
+  config.experiments = { ...config.experiments, asyncWebAssembly: true, layers: true };
+  config.output.webassemblyModuleFilename = "static/wasm/[modulehash].wasm";
+  return config;
+}
+```
+
 ## Internationalisation (i18n)
 
 Three supported languages: **Español (ES) · English (EN) · Русский (RU)**
@@ -492,58 +773,95 @@ The `useTranslations` hook from `next-intl` is called inside components. Because
 
 ### Stack
 
-|Layer           |Choice                                   |Reason                                          |
-|----------------|-----------------------------------------|------------------------------------------------|
-|Framework       |Next.js 14 App Router                    |SSR/SSG, PWA-ready, file routing                |
-|Language        |TypeScript                               |Type safety for chord/theory data               |
-|Styling         |Tailwind + shadcn/ui                     |Design tokens + headless components             |
-|State           |Zustand + persist                        |Simple, no boilerplate, localStorage sync       |
-|**i18n**        |**`next-intl`**                          |**App Router native, locale from store not URL**|
-|Chord data      |`@tombatossals/chords-db` (MIT)          |2,141 voicings, 552 chords with MIDI            |
-|Chord diagrams  |Custom SVG component                     |Full control over rendering                     |
-|Music theory    |`tonal` (MIT)                            |`Key.majorKey()`, `Chord.get()`, scale math     |
-|Audio (Stage 2+)|Tone.js + `nbrosowsky/tonejs-instruments`|Guitar-acoustic samples, CC-BY 3.0              |
-|PWA             |Serwist (`@serwist/next`)                |Successor to next-pwa, active maintenance       |
-|Animations      |Framer Motion                            |Chord card transitions                          |
+|Layer                       |Choice                                      |Reason                                                                               |
+|----------------------------|--------------------------------------------|-------------------------------------------------------------------------------------|
+|Framework                   |Next.js 14 App Router                       |SSR/SSG, PWA-ready, file routing                                                     |
+|Language                    |TypeScript + **Rust**                       |TS for UI/state; Rust for the matching engine                                        |
+|Styling                     |Tailwind + shadcn/ui                        |Design tokens + headless components                                                  |
+|State                       |Zustand + persist                           |Simple, no boilerplate, localStorage sync                                            |
+|i18n                        |`next-intl`                                 |App Router native, locale from store not URL                                         |
+|Chord data                  |`@tombatossals/chords-db` (MIT)             |2,141 voicings, 552 chords with MIDI                                                 |
+|Chord diagrams              |Custom SVG component                        |Full control over rendering                                                          |
+|Music theory (JS)           |`tonal` (MIT)                               |`Key.majorKey()`, `Chord.get()`, Roman numeral display                               |
+|**Song matching engine**    |**Rust → WASM via `wasm-pack --target web`**|**LCS + Jaccard + Levenshtein + IDF in Rust, compiled to WASM, runs in a Web Worker**|
+|**Worker RPC**              |**`comlink`**                               |**Typed async proxy over `postMessage`; no manual message handling**                 |
+|**Serde (Rust/JS boundary)**|**`serde-wasm-bindgen` 0.6 + `serde_json`** |**Corpus sent once as JSON string; results via `serde_wasm_bindgen::to_value`**      |
+|Audio (Stage 2+)            |Tone.js + `nbrosowsky/tonejs-instruments`   |Guitar-acoustic samples, CC-BY 3.0                                                   |
+|PWA                         |Serwist (`@serwist/next`)                   |Successor to next-pwa, active maintenance                                            |
+|Animations                  |Framer Motion                               |Chord card transitions                                                               |
 
 ### Codebase Language Rule
 
-**Everything in the codebase is in English**: file names, folder names, routes, component names, function names, variable names, TypeScript types, comments, and translation key names. Spanish, English, and Russian are purely runtime values living inside `/messages/*.json`. No Spanish or Russian word ever appears outside those files.
+**Everything in the codebase is in English**: file names, folder names, routes, component names, function names, variable names, TypeScript types, Rust identifiers, comments, and translation key names. Spanish, English, and Russian are purely runtime values living inside `/messages/*.json`. No Spanish or Russian word ever appears outside those files.
 
 ### Project Structure
 
 ```
+# Root — npm workspaces monorepo
+/package.json                         ← workspaces: ["app", "packages/matcher-wasm/pkg"]
+
+# Rust WASM crate
+/packages/matcher-wasm/
+  Cargo.toml
+  src/
+    lib.rs                            ← #[wasm_bindgen] exports
+    types.rs                          ← Song, SongSection, SongBar, MatchResult (Tsify + Serde)
+    matcher.rs                        ← Matcher::new(), rank(); thread_local! OnceCell
+    algos/lcs.rs
+    algos/jaccard.rs
+    algos/levenshtein.rs              ← strsim::generic_levenshtein (NOT triple_accel)
+    algos/idf.rs
+    roman.rs                          ← optional transposition pass via rust-music-theory
+  pkg/                                ← wasm-pack output (gitignored)
+
+# Next.js app
 /app
-  /(app)/table/page.tsx         ← not /tabla
-  /(app)/harmony/page.tsx       ← not /armonia
-  /(app)/saved/page.tsx         ← not /guardadas
+  /(app)/table/page.tsx
+  /(app)/harmony/page.tsx
+  /(app)/saved/page.tsx
+  /(app)/songs/page.tsx               ← song list + harmony search
+  /(app)/songs/[id]/page.tsx          ← song detail + timeline
   layout.tsx
   manifest.ts
+  next.config.mjs                     ← asyncWebAssembly: true
+
+/workers
+  matcher.worker.ts                   ← init() + set_corpus() + match_songs() via Comlink
 
 /messages
-  es.json                       ← Spanish translation values
-  en.json                       ← English translation values
-  ru.json                       ← Russian translation values
+  es.json
+  en.json
+  ru.json
 
 /components
-  /chord-diagram/               ← ChordDiagram.tsx, ChordDot.tsx, Barre.tsx
-  /table/                       ← ProgressionTable.tsx, KeyFilter.tsx, DegreeHeader.tsx
-  /harmony/                     ← HarmonyBuilder.tsx, ChordCard.tsx, StrumGrid.tsx
-  /saved/                       ← SavedList.tsx, SavedCard.tsx
-  /settings/LocaleSwitcher.tsx  ← ES · EN · RU pill toggle in header
+  /chord-diagram/
+  /table/
+  /harmony/
+  /saved/
+  /songs/                             ← SongList, SongCard, SongChart/*, HarmonySearchBar
+  /settings/LocaleSwitcher.tsx
 
 /lib
-  /theory/                      ← diatonicChords(), chordQuality(), voiceLeading()
-  /strum/                       ← presets, serialization
-  /i18n/                        ← provider setup, message loader
+  /theory/
+  /strum/
+  /i18n/
+  /songs/
+    ingest.ts                         ← ChordPro → Song JSON + pre-compute romanNumerals
+    corpus.ts                         ← loads + validates songs.json
+  /workers/
+    useMatcher.ts                     ← hook: Worker + Comlink proxy in useEffect
 
 /data
-  /chords.ts                    ← fingering data, position data
-  /curriculum.ts                ← progression templates, suggestions
+  /chords.ts
+  /curriculum.ts
+  /songs/
+    songs.json
+    songs.schema.ts                   ← Zod schema mirroring Rust types.rs
+    /raw/                             ← source .cho ChordPro files
 
 /stores
-  useHarmonyStore.ts            ← current harmony + saved harmonies
-  useSettingsStore.ts           ← showFingering, mode, selectedKey, locale
+  useHarmonyStore.ts
+  useSettingsStore.ts                 ← showFingering, mode, selectedKey, locale
 ```
 
 ### Data Models (TypeScript)
