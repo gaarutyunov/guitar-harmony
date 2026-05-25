@@ -15,6 +15,7 @@ export function getChordFrequencies(position: ChordPosition): number[] {
     const actualFret = fret === 0 ? 0 : position.baseFret - 1 + fret;
     freqs.push(midiToFreq(OPEN_STRINGS_MIDI[i] + actualFret));
   }
+  console.log('[audio] getChordFrequencies frets=', position.frets, 'baseFret=', position.baseFret, '→ freqs=', freqs);
   return freqs;
 }
 
@@ -25,21 +26,29 @@ function getCtx(): AudioContext {
     audioCtx = new (window.AudioContext ||
       (window as unknown as { webkitAudioContext: typeof AudioContext })
         .webkitAudioContext)();
+    console.log('[audio] Created AudioContext, state:', audioCtx.state, 'sampleRate:', audioCtx.sampleRate);
   }
   return audioCtx;
 }
 
 export async function ensureAudioContext(): Promise<void> {
   const ctx = getCtx();
+  console.log('[audio] ensureAudioContext state before resume:', ctx.state);
   if (ctx.state === 'suspended') {
     await ctx.resume();
+    console.log('[audio] ensureAudioContext state after resume:', ctx.state);
   }
+  console.log('[audio] ensureAudioContext final state:', ctx.state, 'currentTime:', ctx.currentTime);
 }
 
 export function playMetronomeClick(accent: boolean): void {
   try {
     const ctx = getCtx();
-    if (ctx.state !== 'running') return;
+    console.log('[audio] playMetronomeClick accent=', accent, 'ctx.state=', ctx.state, 'currentTime=', ctx.currentTime);
+    if (ctx.state !== 'running') {
+      console.warn('[audio] playMetronomeClick SKIPPED — ctx not running:', ctx.state);
+      return;
+    }
     const now = ctx.currentTime + 0.005;
 
     const osc = ctx.createOscillator();
@@ -52,8 +61,9 @@ export function playMetronomeClick(accent: boolean): void {
     gain.connect(ctx.destination);
     osc.start(now);
     osc.stop(now + 0.08);
-  } catch {
-    // Audio not available
+    console.log('[audio] playMetronomeClick SCHEDULED at', now);
+  } catch (e) {
+    console.error('[audio] playMetronomeClick ERROR:', e);
   }
 }
 
@@ -61,10 +71,17 @@ export function playChordStrum(
   frequencies: number[],
   cell: StrumCell
 ): void {
-  if (!cell || (cell as string) === '') return;
+  console.log('[audio] playChordStrum cell=', JSON.stringify(cell), 'freqs count=', frequencies.length);
+  if (!cell || (cell as string) === '') {
+    console.log('[audio] playChordStrum SKIPPED — empty cell');
+    return;
+  }
   try {
     const ctx = getCtx();
-    if (ctx.state !== 'running') return;
+    if (ctx.state !== 'running') {
+      console.warn('[audio] playChordStrum SKIPPED — ctx not running:', ctx.state);
+      return;
+    }
     const now = ctx.currentTime + 0.005;
 
     if (cell === '✕') {
@@ -87,6 +104,7 @@ export function playChordStrum(
       filter.connect(gain);
       gain.connect(ctx.destination);
       source.start(now);
+      console.log('[audio] playChordStrum CHUCK scheduled at', now);
       return;
     }
 
@@ -121,7 +139,8 @@ export function playChordStrum(
       harmonicOsc.start(t);
       harmonicOsc.stop(t + 0.8);
     });
-  } catch {
-    // Audio not available
+    console.log('[audio] playChordStrum SCHEDULED', ordered.length, 'notes, cell=', cell, 'at', now);
+  } catch (e) {
+    console.error('[audio] playChordStrum ERROR:', e);
   }
 }
