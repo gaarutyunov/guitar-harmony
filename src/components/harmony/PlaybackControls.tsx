@@ -113,9 +113,9 @@ export function PlaybackControls() {
     timeoutRef.current = setTimeout(tick, eighthNoteDuration);
   }, [setPosition, stop]);
 
-  const play = useCallback(() => {
+  const play = useCallback(async () => {
     if (chords.length === 0) return;
-    ensureAudioContext();
+    await ensureAudioContext();
     stateRef.current = { chordIdx: 0, beat: 0, rep: 0 };
     setPlaying(true);
     tick();

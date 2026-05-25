@@ -7,9 +7,7 @@ function midiToFreq(midi: number): number {
   return 440 * Math.pow(2, (midi - 69) / 12);
 }
 
-export function getChordFrequencies(
-  position: ChordPosition
-): number[] {
+export function getChordFrequencies(position: ChordPosition): number[] {
   const freqs: number[] = [];
   for (let i = 0; i < 6; i++) {
     const fret = position.frets[i];
@@ -24,32 +22,39 @@ let audioCtx: AudioContext | null = null;
 
 function getCtx(): AudioContext {
   if (!audioCtx) {
-    audioCtx = new AudioContext();
-  }
-  if (audioCtx.state === 'suspended') {
-    audioCtx.resume();
+    audioCtx = new (window.AudioContext ||
+      (window as unknown as { webkitAudioContext: typeof AudioContext })
+        .webkitAudioContext)();
   }
   return audioCtx;
 }
 
-export function ensureAudioContext(): void {
-  getCtx();
+export async function ensureAudioContext(): Promise<void> {
+  const ctx = getCtx();
+  if (ctx.state === 'suspended') {
+    await ctx.resume();
+  }
 }
 
 export function playMetronomeClick(accent: boolean): void {
-  const ctx = getCtx();
-  const now = ctx.currentTime;
+  try {
+    const ctx = getCtx();
+    if (ctx.state !== 'running') return;
+    const now = ctx.currentTime + 0.005;
 
-  const osc = ctx.createOscillator();
-  const gain = ctx.createGain();
-  osc.type = 'sine';
-  osc.frequency.value = accent ? 1200 : 880;
-  gain.gain.setValueAtTime(accent ? 0.35 : 0.18, now);
-  gain.gain.exponentialRampToValueAtTime(0.001, now + 0.06);
-  osc.connect(gain);
-  gain.connect(ctx.destination);
-  osc.start(now);
-  osc.stop(now + 0.06);
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.value = accent ? 1200 : 880;
+    gain.gain.setValueAtTime(accent ? 0.6 : 0.35, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start(now);
+    osc.stop(now + 0.08);
+  } catch {
+    // Audio not available
+  }
 }
 
 export function playChordStrum(
@@ -57,61 +62,66 @@ export function playChordStrum(
   cell: StrumCell
 ): void {
   if (!cell || (cell as string) === '') return;
-  const ctx = getCtx();
-  const now = ctx.currentTime;
+  try {
+    const ctx = getCtx();
+    if (ctx.state !== 'running') return;
+    const now = ctx.currentTime + 0.005;
 
-  if (cell === '✕') {
-    const bufferSize = Math.floor(ctx.sampleRate * 0.04);
-    const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
-    const data = buffer.getChannelData(0);
-    for (let i = 0; i < bufferSize; i++) {
-      data[i] = (Math.random() * 2 - 1);
+    if (cell === '✕') {
+      const bufferSize = Math.floor(ctx.sampleRate * 0.05);
+      const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+      const data = buffer.getChannelData(0);
+      for (let i = 0; i < bufferSize; i++) {
+        data[i] = Math.random() * 2 - 1;
+      }
+      const source = ctx.createBufferSource();
+      source.buffer = buffer;
+      const gain = ctx.createGain();
+      const filter = ctx.createBiquadFilter();
+      filter.type = 'bandpass';
+      filter.frequency.value = 600;
+      filter.Q.value = 2;
+      gain.gain.setValueAtTime(0.4, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+      source.connect(filter);
+      filter.connect(gain);
+      gain.connect(ctx.destination);
+      source.start(now);
+      return;
     }
-    const source = ctx.createBufferSource();
-    source.buffer = buffer;
-    const gain = ctx.createGain();
-    const filter = ctx.createBiquadFilter();
-    filter.type = 'bandpass';
-    filter.frequency.value = 600;
-    filter.Q.value = 2;
-    gain.gain.setValueAtTime(0.25, now);
-    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.06);
-    source.connect(filter);
-    filter.connect(gain);
-    gain.connect(ctx.destination);
-    source.start(now);
-    return;
+
+    const ordered =
+      cell === '↓' ? [...frequencies] : [...frequencies].reverse();
+    const strumDelay = 0.012;
+
+    ordered.forEach((freq, i) => {
+      const t = now + i * strumDelay;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.value = freq;
+
+      const harmonicOsc = ctx.createOscillator();
+      const harmonicGain = ctx.createGain();
+      harmonicOsc.type = 'sine';
+      harmonicOsc.frequency.value = freq * 2;
+      harmonicGain.gain.setValueAtTime(0.04, t);
+      harmonicGain.gain.exponentialRampToValueAtTime(0.001, t + 0.4);
+
+      gain.gain.setValueAtTime(0.15, t);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.8);
+
+      osc.connect(gain);
+      harmonicOsc.connect(harmonicGain);
+      gain.connect(ctx.destination);
+      harmonicGain.connect(ctx.destination);
+
+      osc.start(t);
+      osc.stop(t + 0.8);
+      harmonicOsc.start(t);
+      harmonicOsc.stop(t + 0.8);
+    });
+  } catch {
+    // Audio not available
   }
-
-  const ordered =
-    cell === '↓' ? [...frequencies] : [...frequencies].reverse();
-  const strumDelay = 0.008;
-
-  ordered.forEach((freq, i) => {
-    const t = now + i * strumDelay;
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.type = 'triangle';
-    osc.frequency.value = freq;
-
-    const harmonicOsc = ctx.createOscillator();
-    const harmonicGain = ctx.createGain();
-    harmonicOsc.type = 'sine';
-    harmonicOsc.frequency.value = freq * 2;
-    harmonicGain.gain.setValueAtTime(0.02, t);
-    harmonicGain.gain.exponentialRampToValueAtTime(0.001, t + 0.4);
-
-    gain.gain.setValueAtTime(0.07, t);
-    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.6);
-
-    osc.connect(gain);
-    harmonicOsc.connect(harmonicGain);
-    gain.connect(ctx.destination);
-    harmonicGain.connect(ctx.destination);
-
-    osc.start(t);
-    osc.stop(t + 0.6);
-    harmonicOsc.start(t);
-    harmonicOsc.stop(t + 0.6);
-  });
 }
