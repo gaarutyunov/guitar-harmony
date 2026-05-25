@@ -2,6 +2,7 @@ import { StrumCell } from '@/types';
 import { ChordPosition } from '@/types';
 
 const OPEN_STRINGS_MIDI = [40, 45, 50, 55, 59, 64]; // E2 A2 D3 G3 B3 E4
+const SAMPLE_RATE = 44100;
 
 function midiToFreq(midi: number): number {
   return 440 * Math.pow(2, (midi - 69) / 12);
@@ -18,234 +19,166 @@ export function getChordFrequencies(position: ChordPosition): number[] {
   return freqs;
 }
 
-let audioCtx: AudioContext | null = null;
+// ── WAV generation ──
 
-function getCtx(): AudioContext {
-  if (!audioCtx) {
-    audioCtx = new (window.AudioContext ||
-      (window as unknown as { webkitAudioContext: typeof AudioContext })
-        .webkitAudioContext)();
-    console.log('[audio] Created AudioContext, state:', audioCtx.state,
-      'sampleRate:', audioCtx.sampleRate,
-      'baseLatency:', audioCtx.baseLatency,
-      'destination channels:', audioCtx.destination.maxChannelCount,
-      'destination numberOfInputs:', audioCtx.destination.numberOfInputs);
+const writeStr = (view: DataView, offset: number, str: string) => {
+  for (let i = 0; i < str.length; i++) {
+    view.setUint8(offset + i, str.charCodeAt(i));
   }
-  return audioCtx;
+};
+
+function samplesToWavBlob(samples: Float32Array): Blob {
+  const numSamples = samples.length;
+  const buffer = new ArrayBuffer(44 + numSamples * 2);
+  const view = new DataView(buffer);
+
+  writeStr(view, 0, 'RIFF');
+  view.setUint32(4, 36 + numSamples * 2, true);
+  writeStr(view, 8, 'WAVE');
+  writeStr(view, 12, 'fmt ');
+  view.setUint32(16, 16, true);
+  view.setUint16(20, 1, true);
+  view.setUint16(22, 1, true);
+  view.setUint32(24, SAMPLE_RATE, true);
+  view.setUint32(28, SAMPLE_RATE * 2, true);
+  view.setUint16(32, 2, true);
+  view.setUint16(34, 16, true);
+  writeStr(view, 36, 'data');
+  view.setUint32(40, numSamples * 2, true);
+
+  for (let i = 0; i < numSamples; i++) {
+    const s = Math.max(-1, Math.min(1, samples[i]));
+    view.setInt16(44 + i * 2, Math.floor(s * 32767), true);
+  }
+
+  return new Blob([buffer], { type: 'audio/wav' });
 }
 
-export async function ensureAudioContext(): Promise<void> {
-  const ctx = getCtx();
-  console.log('[audio] ensureAudioContext state before:', ctx.state);
-  if (ctx.state === 'suspended') {
-    await ctx.resume();
+// ── Sound generation ──
+
+function generateClick(accent: boolean): Float32Array {
+  const duration = 0.08;
+  const freq = accent ? 1200 : 880;
+  const len = Math.floor(SAMPLE_RATE * duration);
+  const out = new Float32Array(len);
+  for (let i = 0; i < len; i++) {
+    const t = i / SAMPLE_RATE;
+    const env = Math.exp(-t * 50);
+    out[i] = Math.sin(2 * Math.PI * freq * t) * env * (accent ? 0.8 : 0.5);
   }
-  console.log('[audio] ensureAudioContext final:', ctx.state, 'currentTime:', ctx.currentTime);
+  return out;
 }
 
-export function ensureAudioContextSync(): void {
-  const ctx = getCtx();
-  if (ctx.state === 'suspended') {
-    ctx.resume();
+function generateChuck(): Float32Array {
+  const duration = 0.06;
+  const len = Math.floor(SAMPLE_RATE * duration);
+  const out = new Float32Array(len);
+  for (let i = 0; i < len; i++) {
+    const t = i / SAMPLE_RATE;
+    out[i] = (Math.random() * 2 - 1) * Math.exp(-t * 80) * 0.5;
   }
+  return out;
 }
 
-// ── Test functions: three different approaches to find what works ──
+function generateStrum(
+  frequencies: number[],
+  direction: '↓' | '↑'
+): Float32Array {
+  const duration = 0.9;
+  const len = Math.floor(SAMPLE_RATE * duration);
+  const out = new Float32Array(len);
+  const strumDelay = 0.015;
+  const ordered = direction === '↑' ? [...frequencies].reverse() : frequencies;
 
-export function testOscillator(): void {
-  try {
-    const ctx = getCtx();
-    if (ctx.state === 'suspended') ctx.resume();
-    console.log('[test-osc] ctx.state:', ctx.state, 'currentTime:', ctx.currentTime);
-
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.type = 'square';
-    osc.frequency.value = 440;
-    gain.gain.value = 1.0;
-    osc.connect(gain);
-    gain.connect(ctx.destination);
-    osc.start();
-    setTimeout(() => { try { osc.stop(); } catch { /* */ } }, 300);
-    console.log('[test-osc] started 440Hz square wave for 300ms, gain=1.0');
-  } catch (e) {
-    console.error('[test-osc] ERROR:', e);
-  }
-}
-
-export function testBuffer(): void {
-  try {
-    const ctx = getCtx();
-    if (ctx.state === 'suspended') ctx.resume();
-    console.log('[test-buf] ctx.state:', ctx.state);
-
-    const sr = ctx.sampleRate;
-    const dur = 0.3;
-    const len = Math.floor(sr * dur);
-    const buffer = ctx.createBuffer(1, len, sr);
-    const data = buffer.getChannelData(0);
-    for (let i = 0; i < len; i++) {
-      data[i] = Math.sin(2 * Math.PI * 440 * i / sr) * 0.8;
+  ordered.forEach((freq, si) => {
+    const offset = Math.floor(si * strumDelay * SAMPLE_RATE);
+    for (let i = offset; i < len; i++) {
+      const t = (i - offset) / SAMPLE_RATE;
+      const env = Math.exp(-t * 3.5);
+      const wave =
+        Math.sin(2 * Math.PI * freq * t) +
+        Math.sin(2 * Math.PI * freq * 2 * t) * 0.25 +
+        Math.sin(2 * Math.PI * freq * 3 * t) * 0.08;
+      out[i] += wave * env * 0.12;
     }
-    const source = ctx.createBufferSource();
-    source.buffer = buffer;
-    source.connect(ctx.destination);
-    source.start();
-    console.log('[test-buf] started 440Hz buffer sine for 300ms, samples:', len);
-  } catch (e) {
-    console.error('[test-buf] ERROR:', e);
+  });
+
+  let peak = 0;
+  for (let i = 0; i < len; i++) peak = Math.max(peak, Math.abs(out[i]));
+  if (peak > 0.95) {
+    const scale = 0.9 / peak;
+    for (let i = 0; i < len; i++) out[i] *= scale;
   }
+
+  return out;
 }
 
-export function testHtmlAudio(): void {
-  try {
-    console.log('[test-html] generating WAV...');
-    const sampleRate = 44100;
-    const duration = 0.5;
-    const freq = 440;
-    const numSamples = Math.floor(sampleRate * duration);
-    const bufferLen = 44 + numSamples * 2;
-    const buffer = new ArrayBuffer(bufferLen);
-    const view = new DataView(buffer);
+// ── Cache ──
 
-    const writeStr = (offset: number, str: string) => {
-      for (let i = 0; i < str.length; i++) {
-        view.setUint8(offset + i, str.charCodeAt(i));
-      }
-    };
+let clickAccentUrl: string | null = null;
+let clickNormalUrl: string | null = null;
+let chuckUrl: string | null = null;
+const strumCache = new Map<string, string>();
 
-    writeStr(0, 'RIFF');
-    view.setUint32(4, 36 + numSamples * 2, true);
-    writeStr(8, 'WAVE');
-    writeStr(12, 'fmt ');
-    view.setUint32(16, 16, true);
-    view.setUint16(20, 1, true);
-    view.setUint16(22, 1, true);
-    view.setUint32(24, sampleRate, true);
-    view.setUint32(28, sampleRate * 2, true);
-    view.setUint16(32, 2, true);
-    view.setUint16(34, 16, true);
-    writeStr(36, 'data');
-    view.setUint32(40, numSamples * 2, true);
-
-    for (let i = 0; i < numSamples; i++) {
-      const sample = Math.sin(2 * Math.PI * freq * i / sampleRate) * 0.9;
-      view.setInt16(44 + i * 2, Math.floor(sample * 32767), true);
+function getClickUrl(accent: boolean): string {
+  if (accent) {
+    if (!clickAccentUrl) {
+      clickAccentUrl = URL.createObjectURL(samplesToWavBlob(generateClick(true)));
     }
-
-    const blob = new Blob([buffer], { type: 'audio/wav' });
-    const url = URL.createObjectURL(blob);
-    const audio = new Audio(url);
-    audio.volume = 1.0;
-    const playPromise = audio.play();
-    if (playPromise) {
-      playPromise.then(() => {
-        console.log('[test-html] Audio.play() resolved OK');
-      }).catch((err: unknown) => {
-        console.error('[test-html] Audio.play() REJECTED:', err);
-      });
-    }
-    audio.onended = () => {
-      URL.revokeObjectURL(url);
-      console.log('[test-html] playback ended');
-    };
-    audio.onerror = (e) => {
-      console.error('[test-html] audio element error:', e);
-    };
-    console.log('[test-html] created Audio element, calling play(), duration:', duration);
-  } catch (e) {
-    console.error('[test-html] ERROR:', e);
+    return clickAccentUrl;
   }
+  if (!clickNormalUrl) {
+    clickNormalUrl = URL.createObjectURL(samplesToWavBlob(generateClick(false)));
+  }
+  return clickNormalUrl;
 }
 
-// ── Production audio functions ──
+function getChuckUrl(): string {
+  if (!chuckUrl) {
+    chuckUrl = URL.createObjectURL(samplesToWavBlob(generateChuck()));
+  }
+  return chuckUrl;
+}
 
-function fadeOut(gain: GainNode, duration: number): void {
-  const ctx = gain.context;
-  const now = ctx.currentTime;
-  gain.gain.cancelScheduledValues(now);
-  gain.gain.setValueAtTime(gain.gain.value, now);
-  gain.gain.linearRampToValueAtTime(0.0001, now + duration);
+function getStrumUrl(frequencies: number[], direction: '↓' | '↑', chordName: string): string {
+  const key = `${chordName}_${direction}`;
+  let url = strumCache.get(key);
+  if (!url) {
+    url = URL.createObjectURL(samplesToWavBlob(generateStrum(frequencies, direction)));
+    strumCache.set(key, url);
+  }
+  return url;
+}
+
+// ── Playback via HTML Audio ──
+
+function playUrl(url: string): void {
+  const audio = new Audio(url);
+  audio.volume = 1.0;
+  audio.play().catch((e) => console.error('[audio] play error:', e));
+}
+
+// ── Public API ──
+
+export function ensureAudioReady(): void {
+  getClickUrl(true);
+  getClickUrl(false);
+  getChuckUrl();
 }
 
 export function playMetronomeClick(accent: boolean): void {
-  try {
-    const ctx = getCtx();
-    if (ctx.state !== 'running') return;
-
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.type = 'sine';
-    osc.frequency.value = accent ? 1200 : 880;
-    gain.gain.value = accent ? 0.7 : 0.4;
-    osc.connect(gain);
-    gain.connect(ctx.destination);
-    osc.start();
-
-    setTimeout(() => {
-      fadeOut(gain, 0.03);
-      setTimeout(() => { try { osc.stop(); } catch { /* */ } }, 60);
-    }, 50);
-  } catch (e) {
-    console.error('[audio] metronome ERROR:', e);
-  }
+  playUrl(getClickUrl(accent));
 }
 
 export function playChordStrum(
   frequencies: number[],
-  cell: StrumCell
+  cell: StrumCell,
+  chordName: string
 ): void {
   if (!cell || (cell as string) === '') return;
-  try {
-    const ctx = getCtx();
-    if (ctx.state !== 'running') return;
-
-    if (cell === '✕') {
-      const bufferSize = Math.floor(ctx.sampleRate * 0.05);
-      const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
-      const data = buffer.getChannelData(0);
-      for (let i = 0; i < bufferSize; i++) {
-        data[i] = Math.random() * 2 - 1;
-      }
-      const source = ctx.createBufferSource();
-      source.buffer = buffer;
-      const gain = ctx.createGain();
-      gain.gain.value = 0.4;
-      source.connect(gain);
-      gain.connect(ctx.destination);
-      source.start();
-      setTimeout(() => fadeOut(gain, 0.03), 40);
-      return;
-    }
-
-    const ordered =
-      cell === '↓' ? [...frequencies] : [...frequencies].reverse();
-
-    const oscs: OscillatorNode[] = [];
-    const gains: GainNode[] = [];
-
-    ordered.forEach((freq, i) => {
-      setTimeout(() => {
-        const osc = ctx.createOscillator();
-        const g = ctx.createGain();
-        osc.type = 'triangle';
-        osc.frequency.value = freq;
-        g.gain.value = 0.18;
-        osc.connect(g);
-        g.connect(ctx.destination);
-        osc.start();
-        oscs.push(osc);
-        gains.push(g);
-      }, i * 12);
-    });
-
-    setTimeout(() => {
-      gains.forEach((g) => fadeOut(g, 0.3));
-      setTimeout(() => {
-        oscs.forEach((o) => { try { o.stop(); } catch { /* */ } });
-      }, 400);
-    }, 500);
-  } catch (e) {
-    console.error('[audio] strum ERROR:', e);
+  if (cell === '✕') {
+    playUrl(getChuckUrl());
+    return;
   }
+  playUrl(getStrumUrl(frequencies, cell as '↓' | '↑', chordName));
 }

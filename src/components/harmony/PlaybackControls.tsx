@@ -6,14 +6,10 @@ import { usePlaybackStore } from '@/stores/usePlaybackStore';
 import { useHarmonyStore } from '@/stores/useHarmonyStore';
 import { chordDatabase } from '@/data/chords';
 import {
-  ensureAudioContext,
-  ensureAudioContextSync,
+  ensureAudioReady,
   getChordFrequencies,
   playMetronomeClick,
   playChordStrum,
-  testOscillator,
-  testBuffer,
-  testHtmlAudio,
 } from '@/lib/audio/audio';
 
 export function PlaybackControls() {
@@ -38,13 +34,10 @@ export function PlaybackControls() {
   const setPosition = usePlaybackStore((s) => s.setPosition);
   const resetPosition = usePlaybackStore((s) => s.resetPosition);
 
-  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
-    null
-  );
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const stateRef = useRef({ chordIdx: 0, beat: 0, rep: 0 });
 
   const stop = useCallback(() => {
-    console.log('[playback] stop() called');
     if (timeoutRef.current) {
       clearTimeout(timeoutRef.current);
       timeoutRef.current = null;
@@ -57,41 +50,26 @@ export function PlaybackControls() {
     const harmony = useHarmonyStore.getState().current;
     const { chordIdx, beat, rep } = stateRef.current;
 
-    console.log('[playback] tick chordIdx=', chordIdx, 'beat=', beat, 'rep=', rep,
-      'totalChords=', harmony.chords.length,
-      'metronome=', store.metronomeEnabled,
-      'audio=', store.audioEnabled);
-
     if (chordIdx >= harmony.chords.length) {
-      console.log('[playback] tick → chordIdx past end, stopping');
       stop();
       return;
     }
 
     const chord = harmony.chords[chordIdx];
-    console.log('[playback] current chord:', chord.name, 'pattern:', JSON.stringify(chord.strumPattern));
     setPosition(chordIdx, beat, rep);
 
     if (store.metronomeEnabled && beat % 2 === 0) {
-      console.log('[playback] → playing metronome click, accent=', beat === 0);
       playMetronomeClick(beat === 0);
     }
 
     if (store.audioEnabled) {
       const cell = chord.strumPattern[beat];
-      console.log('[playback] → audio check: cell at beat', beat, '=', JSON.stringify(cell));
       if (cell && (cell as string) !== '') {
         const chordData = chordDatabase[chord.name];
-        console.log('[playback] → chordDatabase lookup:', chord.name, '→', chordData ? 'FOUND' : 'NOT FOUND');
         if (chordData?.positions[0]) {
           const freqs = getChordFrequencies(chordData.positions[0]);
-          console.log('[playback] → playing chord strum, freqs=', freqs.length, 'cell=', cell);
-          playChordStrum(freqs, cell);
-        } else {
-          console.warn('[playback] → no chord position data for', chord.name);
+          playChordStrum(freqs, cell, chord.name);
         }
-      } else {
-        console.log('[playback] → cell empty, skipping audio');
       }
     }
 
@@ -108,9 +86,7 @@ export function PlaybackControls() {
         if (nextChordIdx >= harmony.chords.length) {
           if (store.loopEnabled) {
             nextChordIdx = 0;
-            console.log('[playback] → looping back to start');
           } else {
-            console.log('[playback] → reached end, scheduling final stop');
             stateRef.current = {
               chordIdx: nextChordIdx,
               beat: 0,
@@ -132,16 +108,12 @@ export function PlaybackControls() {
     };
 
     const eighthNoteDuration = 60000 / (store.bpm * 2);
-    console.log('[playback] → next tick in', eighthNoteDuration.toFixed(0), 'ms (bpm=', store.bpm, ')');
     timeoutRef.current = setTimeout(tick, eighthNoteDuration);
   }, [setPosition, stop]);
 
-  const play = useCallback(async () => {
-    console.log('[playback] play() called, chords.length=', chords.length);
+  const play = useCallback(() => {
     if (chords.length === 0) return;
-    console.log('[playback] ensuring AudioContext...');
-    await ensureAudioContext();
-    console.log('[playback] AudioContext ready, starting sequencer');
+    ensureAudioReady();
     stateRef.current = { chordIdx: 0, beat: 0, rep: 0 };
     setPlaying(true);
     tick();
@@ -232,28 +204,6 @@ export function PlaybackControls() {
             +
           </button>
         </div>
-      </div>
-
-      {/* Audio debug row */}
-      <div className="flex items-center gap-1 flex-wrap">
-        <button
-          onClick={() => { ensureAudioContextSync(); testOscillator(); }}
-          className="px-2 py-0.5 rounded text-[10px] font-mono bg-rose-500/20 text-rose-400 border border-rose-500/40"
-        >
-          Test:Oscillator
-        </button>
-        <button
-          onClick={() => { ensureAudioContextSync(); testBuffer(); }}
-          className="px-2 py-0.5 rounded text-[10px] font-mono bg-teal-500/20 text-teal-400 border border-teal-500/40"
-        >
-          Test:Buffer
-        </button>
-        <button
-          onClick={() => { testHtmlAudio(); }}
-          className="px-2 py-0.5 rounded text-[10px] font-mono bg-amber-500/20 text-amber-400 border border-amber-500/40"
-        >
-          Test:HTML Audio
-        </button>
       </div>
 
       {/* Settings row */}
