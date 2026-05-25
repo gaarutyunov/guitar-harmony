@@ -31,8 +31,8 @@ export const chordDatabase: Record<string, ChordData> = {
   'F': {
     name: 'F',
     positions: [{
-      frets: [1, 1, 2, 3, 3, 1],
-      fingers: [1, 1, 2, 3, 4, 1],
+      frets: [1, 3, 3, 2, 1, 1],
+      fingers: [1, 3, 4, 2, 1, 1],
       barres: [1],
       baseFret: 1,
     }],
