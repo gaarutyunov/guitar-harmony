@@ -90,6 +90,14 @@
     "find_similar": "Buscar similares",
     "find_songs": "Buscar canciones"
   },
+  "alternatives": {
+    "title": "Alternativas",
+    "barre_badge": "cejilla",
+    "current": "(actual)",
+    "no_barre": "sin cejilla",
+    "partial_barre": "cejilla parcial",
+    "full_barre": "cejilla completa"
+  },
   "toast": {
     "chord_added": "{chord} añadido",
     "progression_loaded": "Cargada: {name}",

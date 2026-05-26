@@ -90,6 +90,14 @@
     "find_similar": "Найти похожие",
     "find_songs": "Найти песни"
   },
+  "alternatives": {
+    "title": "Альтернативы",
+    "barre_badge": "баррэ",
+    "current": "(текущий)",
+    "no_barre": "без баррэ",
+    "partial_barre": "частичное баррэ",
+    "full_barre": "полное баррэ"
+  },
   "toast": {
     "chord_added": "{chord} добавлен",
     "progression_loaded": "Загружена: {name}",

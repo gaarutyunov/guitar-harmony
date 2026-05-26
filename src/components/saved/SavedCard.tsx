@@ -44,8 +44,8 @@ export function SavedCard({ harmony, onLoad, onDelete }: SavedCardProps) {
       <div className="flex gap-2 p-3 overflow-x-auto">
         {harmony.chords.map((chord) => (
           <div key={chord.id} className="flex-shrink-0">
-            <ChordDiagram chordName={chord.name} showFingering={showFingering} size="sm" />
-            <p className="text-center text-[10px] font-mono text-mahogany-400 mt-0.5">{chord.name}</p>
+            <ChordDiagram chordName={chord.name} position={chord.voicingPosition} showFingering={showFingering} size="sm" />
+            <p className="text-center text-[10px] font-mono text-mahogany-400 mt-0.5">{chord.voicingSymbol || chord.name}</p>
           </div>
         ))}
       </div>

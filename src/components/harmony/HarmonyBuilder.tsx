@@ -21,6 +21,7 @@ export function HarmonyBuilder() {
   const removeChord = useHarmonyStore((s) => s.removeChord);
   const moveChord = useHarmonyStore((s) => s.moveChord);
   const updatePattern = useHarmonyStore((s) => s.updatePattern);
+  const updateVoicing = useHarmonyStore((s) => s.updateVoicing);
   const setQuery = useSongsStore((s) => s.setQuery);
   const setSearchMode = useSongsStore((s) => s.setSearchMode);
   const currentChordIndex = usePlaybackStore((s) => s.currentChordIndex);
@@ -153,6 +154,7 @@ export function HarmonyBuilder() {
                 onMove={(dir) => moveChord(chord.id, dir)}
                 onRemove={() => removeChord(chord.id)}
                 onUpdatePattern={(pattern) => updatePattern(chord.id, pattern)}
+                onUpdateVoicing={(v) => updateVoicing(chord.id, v.id, v.symbol, v.inversion, v.hasBarre, v.position)}
                 isActive={isPlaying && currentChordIndex === idx}
                 activeBeat={
                   isPlaying && currentChordIndex === idx ? currentBeat : -1
