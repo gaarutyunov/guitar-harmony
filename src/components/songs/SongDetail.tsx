@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { useSongsStore } from "@/stores/useSongsStore";
 import { useHarmonyStore } from "@/stores/useHarmonyStore";
+import { usePlaybackStore } from "@/stores/usePlaybackStore";
 import { useSettingsStore } from "@/stores/useSettingsStore";
 import { SectionTimeline } from "./SectionTimeline";
 import { SongSection } from "@/types";
@@ -35,6 +36,7 @@ export function SongDetail() {
   const addChord = useHarmonyStore((s) => s.addChord);
   const setName = useHarmonyStore((s) => s.setName);
   const clearCurrent = useHarmonyStore((s) => s.clearCurrent);
+  const setBpm = usePlaybackStore((s) => s.setBpm);
   const mode = useSettingsStore((s) => s.mode);
 
   const song = selectedSongId ? getSong(selectedSongId) : undefined;
@@ -79,6 +81,9 @@ export function SongDetail() {
     if (!song) return;
     clearCurrent();
     setName(`${song.artist} - ${song.title}`);
+    if (song.bpm) {
+      setBpm(song.bpm);
+    }
     for (const bar of bars) {
       for (const chordName of bar.chords) {
         addChord({

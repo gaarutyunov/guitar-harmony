@@ -13,6 +13,7 @@ export interface Harmony {
   id: string;
   name: string;
   timeSignature: "4/4" | "3/4";
+  bpm: number;
   chords: HarmonyChord[];
   createdAt: number;
 }
