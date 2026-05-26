@@ -1,14 +1,18 @@
-import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
-import { v4 as uuidv4 } from 'uuid';
-import { Harmony, HarmonyChord, StrumCell, TimeSignature } from '@/types';
-import { getEmptyPattern } from '@/lib/strum/presets';
+import { create } from "zustand";
+import { persist } from "zustand/middleware";
+import { v4 as uuidv4 } from "uuid";
+import { Harmony, HarmonyChord, StrumCell, TimeSignature } from "@/types";
+import { getEmptyPattern } from "@/lib/strum/presets";
+import { usePlaybackStore } from "@/stores/usePlaybackStore";
+
+const DEFAULT_BPM = 80;
 
 function createEmptyHarmony(): Harmony {
   return {
     id: uuidv4(),
-    name: '',
-    timeSignature: '4/4',
+    name: "",
+    timeSignature: "4/4",
+    bpm: DEFAULT_BPM,
     chords: [],
     createdAt: Date.now(),
   };
@@ -17,11 +21,12 @@ function createEmptyHarmony(): Harmony {
 interface HarmonyState {
   current: Harmony;
   saved: Harmony[];
-  addChord: (chord: Omit<HarmonyChord, 'id' | 'strumPattern'>) => void;
+  addChord: (chord: Omit<HarmonyChord, "id" | "strumPattern">) => void;
   removeChord: (id: string) => void;
   moveChord: (id: string, dir: -1 | 1) => void;
   updatePattern: (id: string, pattern: StrumCell[]) => void;
   setName: (name: string) => void;
+  setBpm: (bpm: number) => void;
   setTimeSignature: (ts: TimeSignature) => void;
   clearCurrent: () => void;
   saveHarmony: () => boolean;
@@ -75,13 +80,18 @@ export const useHarmonyStore = create<HarmonyState>()(
           current: {
             ...state.current,
             chords: state.current.chords.map((c) =>
-              c.id === id ? { ...c, strumPattern: pattern } : c
+              c.id === id ? { ...c, strumPattern: pattern } : c,
             ),
           },
         })),
 
       setName: (name) =>
         set((state) => ({ current: { ...state.current, name } })),
+
+      setBpm: (bpm) =>
+        set((state) => ({
+          current: { ...state.current, bpm: Math.max(40, Math.min(220, bpm)) },
+        })),
 
       setTimeSignature: (ts) =>
         set((state) => ({
@@ -100,8 +110,10 @@ export const useHarmonyStore = create<HarmonyState>()(
       saveHarmony: () => {
         const { current } = get();
         if (!current.name.trim() || current.chords.length === 0) return false;
+        const playbackBpm = usePlaybackStore.getState().bpm;
         const snapshot: Harmony = {
           ...current,
+          bpm: playbackBpm,
           id: uuidv4(),
           createdAt: Date.now(),
         };
@@ -114,6 +126,9 @@ export const useHarmonyStore = create<HarmonyState>()(
         const found = saved.find((h) => h.id === id);
         if (found) {
           set({ current: { ...found, id: uuidv4() } });
+          if (found.bpm) {
+            usePlaybackStore.getState().setBpm(found.bpm);
+          }
         }
       },
 
@@ -124,6 +139,6 @@ export const useHarmonyStore = create<HarmonyState>()(
 
       setCurrent: (harmony) => set({ current: harmony }),
     }),
-    { name: 'guitar-harmony-data' }
-  )
+    { name: "guitar-harmony-data" },
+  ),
 );

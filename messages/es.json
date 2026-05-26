@@ -2,7 +2,8 @@
   "tabs": {
     "table": "Tabla",
     "harmony": "Armonía",
-    "saved": "Guardadas"
+    "saved": "Guardadas",
+    "songs": "Canciones"
   },
   "table": {
     "mode_major": "Mayor",
@@ -61,6 +62,32 @@
     "loop": "Bucle",
     "rep": "rep",
     "bpm": "BPM"
+  },
+  "songs": {
+    "title": "Canciones",
+    "search_placeholder": "Buscar por título o artista...",
+    "search_by_harmony": "Buscar por armonía",
+    "browse_mode": "Ver todas",
+    "difficulty": "Dificultad",
+    "genre": "Género",
+    "key": "Tonalidad",
+    "bpm": "BPM",
+    "capo": "Cejilla",
+    "show_filters": "Filtros",
+    "hide_filters": "Ocultar filtros",
+    "songs_count": "canciones",
+    "no_results": "No se encontraron canciones",
+    "no_results_hint": "Prueba con menos acordes o diferentes",
+    "matched_section": "Coincidencia",
+    "pick_chords": "Elige acordes para buscar...",
+    "clear": "Limpiar",
+    "back_to_list": "Volver",
+    "tap_bars": "Toca los compases para seleccionar un rango",
+    "clear_selection": "Limpiar selección",
+    "extract_section": "Extraer como armonía",
+    "extract_selected": "Extraer compases seleccionados",
+    "find_similar": "Buscar similares",
+    "find_songs": "Buscar canciones"
   },
   "toast": {
     "chord_added": "{chord} añadido",

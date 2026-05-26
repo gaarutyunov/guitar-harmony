@@ -2,7 +2,8 @@
   "tabs": {
     "table": "Table",
     "harmony": "Harmony",
-    "saved": "Saved"
+    "saved": "Saved",
+    "songs": "Songs"
   },
   "table": {
     "mode_major": "Major",
@@ -61,6 +62,32 @@
     "loop": "Loop",
     "rep": "rep",
     "bpm": "BPM"
+  },
+  "songs": {
+    "title": "Songs",
+    "search_placeholder": "Search by title or artist...",
+    "search_by_harmony": "Search by harmony",
+    "browse_mode": "Browse all",
+    "difficulty": "Difficulty",
+    "genre": "Genre",
+    "key": "Key",
+    "bpm": "BPM",
+    "capo": "Capo",
+    "show_filters": "Filters",
+    "hide_filters": "Hide filters",
+    "songs_count": "songs",
+    "no_results": "No songs found",
+    "no_results_hint": "Try fewer chords or different ones",
+    "matched_section": "Match",
+    "pick_chords": "Pick chords to search...",
+    "clear": "Clear",
+    "back_to_list": "Back",
+    "tap_bars": "Tap bars to select a range",
+    "clear_selection": "Clear selection",
+    "extract_section": "Extract as harmony",
+    "extract_selected": "Extract selected bars",
+    "find_similar": "Find similar",
+    "find_songs": "Find songs"
   },
   "toast": {
     "chord_added": "{chord} added",
