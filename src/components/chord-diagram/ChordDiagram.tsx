@@ -1,18 +1,20 @@
 'use client';
 
+import { ChordPosition } from '@/types';
 import { getChordData } from '@/data/chords';
 import { getChordNoteNames } from '@/lib/theory';
 
 interface ChordDiagramProps {
   chordName: string;
+  position?: ChordPosition;
   showFingering: boolean;
   showNotes?: boolean;
   size?: 'sm' | 'md';
 }
 
-export function ChordDiagram({ chordName, showFingering, showNotes = false, size = 'md' }: ChordDiagramProps) {
+export function ChordDiagram({ chordName, position, showFingering, showNotes = false, size = 'md' }: ChordDiagramProps) {
   const data = getChordData(chordName);
-  const pos = data?.positions[0];
+  const pos = position ?? data?.positions[0];
   const noteNames = pos ? getChordNoteNames(pos) : [];
 
   const w = size === 'sm' ? 80 : 120;
@@ -36,16 +38,26 @@ export function ChordDiagram({ chordName, showFingering, showNotes = false, size
     );
   }
 
-  const padding = { top: 25, left: 20, right: 15, bottom: 10 };
+  const frettedValues = pos.frets.filter((f) => f > 0);
+  const startFret = frettedValues.length > 0 ? Math.min(...frettedValues) : 1;
+  const isOpenPosition = startFret === 1;
+
+  const padding = { top: 25, left: isOpenPosition ? 20 : 28, right: 15, bottom: 10 };
   const stringSpacing = (w - padding.left - padding.right) / 5;
   const fretSpacing = (h - padding.top - padding.bottom) / 4;
   const dotRadius = size === 'sm' ? 5 : 7;
   const fontSize = size === 'sm' ? 7 : 9;
+  const labelFontSize = size === 'sm' ? 6 : 8;
+
+  function fretToY(absoluteFret: number): number {
+    const relative = absoluteFret - startFret + 1;
+    return padding.top + (relative - 0.5) * fretSpacing;
+  }
 
   return (
     <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} className="flex-shrink-0">
-      {/* Nut or position indicator */}
-      {pos.baseFret === 1 ? (
+      {/* Nut (only at fret 1) or fret numbers on the left */}
+      {isOpenPosition ? (
         <line
           x1={padding.left}
           y1={padding.top}
@@ -55,16 +67,19 @@ export function ChordDiagram({ chordName, showFingering, showNotes = false, size
           strokeWidth={3}
         />
       ) : (
-        <text
-          x={padding.left - 12}
-          y={padding.top + fretSpacing / 2 + 4}
-          fill="#d4a574"
-          fontSize={fontSize + 1}
-          fontFamily="JetBrains Mono"
-          textAnchor="middle"
-        >
-          {pos.baseFret}
-        </text>
+        [0, 1, 2, 3].map((i) => (
+          <text
+            key={`fret-label-${i}`}
+            x={padding.left - 8}
+            y={padding.top + (i + 0.5) * fretSpacing + labelFontSize / 3}
+            fill="#d4a574"
+            fontSize={labelFontSize}
+            fontFamily="JetBrains Mono"
+            textAnchor="middle"
+          >
+            {startFret + i}
+          </text>
+        ))
       )}
 
       {/* Fret lines */}
@@ -101,7 +116,7 @@ export function ChordDiagram({ chordName, showFingering, showNotes = false, size
         if (barreStrings.length < 2) return null;
         const minStr = Math.min(...barreStrings);
         const maxStr = Math.max(...barreStrings);
-        const y = padding.top + (barreFret - 0.5) * fretSpacing;
+        const y = fretToY(barreFret);
         return (
           <rect
             key={`barre-${barreFret}`}
@@ -173,7 +188,7 @@ export function ChordDiagram({ chordName, showFingering, showNotes = false, size
           );
         }
 
-        const y = padding.top + (fret - 0.5) * fretSpacing;
+        const y = fretToY(fret);
         const isBarre = pos.barres.includes(fret);
 
         return (
