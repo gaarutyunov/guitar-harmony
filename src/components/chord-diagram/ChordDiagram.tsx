@@ -1,18 +1,20 @@
 'use client';
 
+import { ChordPosition } from '@/types';
 import { getChordData } from '@/data/chords';
 import { getChordNoteNames } from '@/lib/theory';
 
 interface ChordDiagramProps {
   chordName: string;
+  position?: ChordPosition;
   showFingering: boolean;
   showNotes?: boolean;
   size?: 'sm' | 'md';
 }
 
-export function ChordDiagram({ chordName, showFingering, showNotes = false, size = 'md' }: ChordDiagramProps) {
+export function ChordDiagram({ chordName, position, showFingering, showNotes = false, size = 'md' }: ChordDiagramProps) {
   const data = getChordData(chordName);
-  const pos = data?.positions[0];
+  const pos = position ?? data?.positions[0];
   const noteNames = pos ? getChordNoteNames(pos) : [];
 
   const w = size === 'sm' ? 80 : 120;

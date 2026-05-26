@@ -1,5 +1,31 @@
 export type StrumCell = "" | "↓" | "↑" | "✕";
 
+export type Inversion = 'root' | '1st' | '2nd' | '3rd';
+export type StringIndex = 0 | 1 | 2 | 3 | 4 | 5;
+
+export interface FretPosition {
+  string: StringIndex;
+  fret: number;
+  note: string;
+  role: 'root' | '3rd' | '5th' | '7th';
+  finger?: 1 | 2 | 3 | 4 | 'barre';
+}
+
+export interface GuitarVoicing {
+  id: string;
+  chord: string;
+  symbol: string;
+  bass: string;
+  inversion: Inversion;
+  position: ChordPosition;
+  mutedStrings: StringIndex[];
+  hasBarre: boolean;
+  isPartialBarre: boolean;
+  barreAt?: number;
+  fretSpan: number;
+  difficultyScore: number;
+}
+
 export interface HarmonyChord {
   id: string;
   name: string;
@@ -7,6 +33,10 @@ export interface HarmonyChord {
   key: string;
   mode: "major" | "minor";
   strumPattern: StrumCell[];
+  voicingId?: string;
+  voicingSymbol?: string;
+  voicingInversion?: Inversion;
+  voicingHasBarre?: boolean;
 }
 
 export interface Harmony {

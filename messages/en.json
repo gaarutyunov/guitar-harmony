@@ -89,6 +89,14 @@
     "find_similar": "Find similar",
     "find_songs": "Find songs"
   },
+  "alternatives": {
+    "title": "Alternatives",
+    "barre_badge": "barre",
+    "current": "(current)",
+    "no_barre": "no barre",
+    "partial_barre": "partial barre",
+    "full_barre": "full barre"
+  },
   "toast": {
     "chord_added": "{chord} added",
     "progression_loaded": "Loaded: {name}",
