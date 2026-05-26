@@ -216,21 +216,173 @@ User taps Load from Saved
 
 ## Stage 2 — Harmonic Depth
 
-### Feature 6: Chord Inversions & Positions (CAGED System)
+### Feature 6: Chord Inversions — Barre-Free Alternatives
 
-**Goal:** the user learns that any chord can be played in multiple places on the neck.
+**Goal:** when a chord in the harmony has a barre (*cejilla*), offer the user easier alternative voicings of the same chord — including inverted forms (1st inversion, 2nd inversion) that avoid the barre entirely or reduce it to a partial barre.
 
-Each chord card gets a position selector: `[ Root | 1st inv | 2nd inv | CAGED-C | CAGED-A | CAGED-G | CAGED-E | CAGED-D ]`
+-----
 
-Switching position re-renders the chord diagram with a different voicing of the same chord. The app explains which strings are in the bass (root, 3rd, or 5th) and what changes harmonically.
+#### Why inversions help with barre chords
 
-**Theory explanation per voicing:**
+A barre chord places the same note (the chord root) in the bass. An inversion moves a different chord tone to the bass — the 3rd (1st inversion) or the 5th (2nd inversion) — which often allows the shape to be played without barring all six strings. The chord sounds nearly identical in a strummed progression; the harmonic difference is subtle and musically acceptable, especially for beginners.
 
-- Root position: root note in bass (most stable)
-- 1st inversion: 3rd in bass (lighter feel, good for inner voices)
-- 2nd inversion: 5th in bass (unstable, typically a passing chord)
+Classic examples:
 
-**UI addition:** neck diagram view — a horizontal fretboard (frets 0–12) showing where all positions of the selected chord live. Tapping a position jumps the chord card to that voicing.
+|Original (barre)         |Inversion alternative (no barre)|Bass note|
+|-------------------------|--------------------------------|---------|
+|F major — E-shape, fret 1|F/A — 1st inv, shape: `x03211`  |A (3rd)  |
+|Bm — A-shape, fret 2     |Bm/D — 1st inv, 3-string triad  |D (3rd)  |
+|F#m — E-shape, fret 2    |F#m/A — 1st inv, open-ish shape |A (3rd)  |
+|Bb — A-shape, fret 1     |Bb/D — 1st inv                  |D (3rd)  |
+|C#m — A-shape, fret 4    |C#m/E — 1st inv                 |E (3rd)  |
+
+-----
+
+#### Barre detection
+
+A voicing is tagged `hasBarre: true` when:
+
+- Any finger is marked `finger: 'barre'` in the chord data, **or**
+- 3 or more fretted notes share the same fret across non-adjacent strings (implied barre)
+
+A voicing is tagged `isPartialBarre: true` when only strings 1–3 (high strings) or strings 4–6 (low strings) are barred — this is still flagged but rated easier than a full barre.
+
+-----
+
+#### UI — Barre indicator on chord cards
+
+When a chord card’s active voicing has a barre, a small pill badge appears below the chord name:
+
+```
+╔══════════════════════╗
+║  F          [cejilla] ║  ← amber pill badge
+║  [chord diagram]      ║
+║  [strum pattern]      ║
+╚══════════════════════╝
+```
+
+Tapping the `[cejilla]` badge — or a dedicated **“Alternativas”** button — opens a bottom sheet showing all available voicings of that chord, sorted by difficulty (easiest first).
+
+-----
+
+#### Alternatives bottom sheet
+
+Each alternative is shown as a compact chord card row:
+
+```
+┌─────────────────────────────────────────────┐
+│  F/A    1st inv · no barre     ●○○○○  Easy  │
+│  [mini diagram]                              │
+├─────────────────────────────────────────────┤
+│  F      Root · CAGED-C shape   ●●○○○  Med   │
+│  [mini diagram]   (current)                 │
+├─────────────────────────────────────────────┤
+│  F/C    2nd inv · no barre     ●●○○○  Med   │
+│  [mini diagram]                              │
+└─────────────────────────────────────────────┘
+```
+
+- **Difficulty dots** (●○○○○ to ●●●●●) derived from `difficultyScore`
+- **Barre label** shown explicitly: “no barre”, “partial barre”, “full barre”
+- **Inversion label**: “Root position”, “1st inversion (3rd in bass)”, “2nd inversion (5th in bass)”
+- **Slash notation**: `F/A`, `F/C` — shown in the chord header and updated in the harmony timeline
+- Tapping a row applies that voicing to the chord card and closes the sheet
+- The harmony’s voice leading score recalculates immediately
+
+-----
+
+#### Voicing generation
+
+For each chord in the harmony, the app generates a candidate set of voicings:
+
+1. **Root-position voicings** — from `@tombatossals/chords-db` (all stored positions)
+1. **1st inversion** — bass note = chord’s 3rd; fretboard search finds all playable shapes where the lowest sounded string produces the 3rd
+1. **2nd inversion** — bass note = chord’s 5th; same search
+1. **3rd inversion** (7th chords only) — bass note = chord’s 7th
+
+Each candidate is scored:
+
+```ts
+interface GuitarVoicing {
+  chord: string;            // "F"
+  symbol: string;           // "F/A" (slash notation) or "F" (root)
+  bass: string;             // "A3" — scientific pitch of lowest sounded note
+  inversion: 'root' | '1st' | '2nd' | '3rd';
+  positions: FretPosition[];
+  mutedStrings: StringIndex[];
+  hasBarre: boolean;
+  isPartialBarre: boolean;
+  barreAt?: number;         // fret number if barre present
+  fretSpan: number;         // max fret − min non-open fret
+  difficultyScore: number;  // 0–100; lower = easier
+}
+
+interface FretPosition {
+  string: StringIndex;      // 0 = low E, 5 = high e
+  fret: number;
+  note: string;             // "A3"
+  role: 'root' | '3rd' | '5th' | '7th';
+  finger?: 1 | 2 | 3 | 4 | 'barre';
+}
+```
+
+**Difficulty scoring formula:**
+
+```
+difficultyScore =
+  (hasBarre ? 35 : 0)
+  + (isPartialBarre ? 15 : 0)
+  + fretSpan * 8
+  + fingerCount * 5
+  + (hasStringSKip ? 5 : 0)
+  + clamp(barreAt - 1, 0, 5) * 3   // higher-fret barre = harder
+```
+
+Candidates are sorted ascending by `difficultyScore`. The default voicing (from chords-db) is pre-selected; the user’s choice persists in `HarmonyChord.voicingId`.
+
+-----
+
+#### Theory explanation (inline, collapsible)
+
+Below the alternatives list, a collapsible panel explains what an inversion means:
+
+> **1st inversion (F/A)** — The note A (the 3rd of F major) is in the bass instead of F. The chord sounds slightly lighter and is often used as a passing chord between F and G. In a strummed progression the difference is subtle; what matters is that it’s easier to play.
+
+> **2nd inversion (F/C)** — The note C (the 5th of F major) is in the bass. This voicing feels less settled harmonically and works best as a brief passing moment, not on a strong beat.
+
+The explanation is shown in the active locale (ES / EN / RU).
+
+-----
+
+#### Updated data model
+
+```ts
+interface HarmonyChord {
+  id: string;
+  name: string;             // "F"
+  degree: string;           // "IV"
+  key: string;              // "C"
+  mode: 'major' | 'minor';
+  strumPattern: StrumCell[];
+  bars?: number;            // Stage 2: duration in bars
+  // NEW — voicing selection
+  voicingId?: string;       // identifies the chosen voicing within the chord's candidate set
+  voicingSymbol?: string;   // "F/A" — shown in header and timeline; null = root position
+  voicingInversion?: 'root' | '1st' | '2nd' | '3rd';
+  voicingHasBarre?: boolean;
+}
+```
+
+The `voicingId` references an entry in `@tombatossals/chords-db` for root-position voicings, or a generated `GuitarVoicing` object for inversions (stored transiently, not persisted — regenerated on load from `voicingSymbol` + `voicingInversion`).
+
+-----
+
+#### Scope for Stage 2
+
+- Barre detection and the **“Alternativas”** bottom sheet are the core deliverable.
+- The fretboard search for inversion voicings runs in TypeScript (no WASM needed — candidate set per chord is small, < 30 voicings, < 2 ms).
+- CAGED position names (C-shape, A-shape, etc.) are shown as informational labels on root-position voicings from chords-db but are **not** a primary axis of the UI — the user selects by playability and inversion, not by CAGED shape name.
+- The neck diagram view (frets 0–12 showing all positions) is deferred to Stage 3.
 
 -----
 
@@ -245,7 +397,18 @@ For any two adjacent chords in the harmony, the app shows:
 - Which fingers jump (skip — highlighted red)
 - A “Voice Leading Score” (0–100): higher = smoother transition
 
-**Suggestion engine:** given the current chord sequence, the app suggests alternative voicings for each chord that minimize total finger movement across the whole progression.
+When the user swaps a voicing (e.g. F root → F/A 1st inversion), the voice leading score updates immediately for both the preceding and following transitions. This gives direct feedback: the user sees that choosing the inversion often improves the score because the fingers stay closer to the adjacent chords.
+
+**Suggestion engine:** given the current chord sequence and the full voicing candidate set for each chord, the app can auto-select voicings that minimize total finger movement across the whole progression. Offered as a one-tap “Optimize voicings” action.
+
+**Voice leading score formula:**
+
+```
+voiceLeadingScore(prev, next) =
+  100 - min(100, fretDistanceSum * 8 + positionShiftPenalty * 6)
+```
+
+Where `fretDistanceSum` = sum of |Δfret| for each finger that moves between the two voicings, and `positionShiftPenalty` = 1 if the hand shifts more than 3 frets, else 0.
 
 **One-finger variations:** for any chord, a panel shows what chord you get by moving each finger up or down by one fret. Example: C → Csus2 (lift finger 1), C → Cadd9 (move finger 1 from B to A string). This teaches chord substitution through physical intuition.
 
@@ -314,8 +477,7 @@ The user has a harmony (e.g. `Am · F · C · G`). The library finds and ranks a
 - From the Harmony tab: a “Find songs” button appears once 2+ chords are in the harmony.
 - From the Songs tab: a “Search by harmony” mode where the user picks chords directly.
 
-**What “match” means:**
-The match is on **chord names as literal tokens** — `Am`, `F`, `C`, `G`. A song that uses `Am · F · C · G` in its chorus is a strong match. A song that uses `Em · C · G · D` (the same relative progression in a different key) does **not** match by default, because the user is learning specific fingering shapes, not abstract patterns. Roman numerals are shown as informational context (`vi–IV–I–V in C major`) but play no role in scoring.
+**What “match” means:** The match is on **chord names as literal tokens** — `Am`, `F`, `C`, `G`. A song that uses `Am · F · C · G` in its chorus is a strong match. A song that uses `Em · C · G · D` (the same relative progression in a different key) does **not** match by default, because the user is learning specific fingering shapes, not abstract patterns. Roman numerals are shown as informational context (`vi–IV–I–V in C major`) but play no role in scoring.
 
 **Scoring algorithm — three components, all operating on chord name strings:**
 
@@ -323,17 +485,18 @@ The match is on **chord names as literal tokens** — `Am`, `F`, `C`, `G`. A son
 totalScore = (lcs * 0.55) + (jaccard * 0.25) + (levenshtein * 0.20)
 ```
 
-1. **Longest Common Contiguous Substring (LCS) — weight 0.55**
-   Find the longest contiguous run of matching chord names between the query and a song section sequence. Normalize by query length.
+1. **Longest Common Contiguous Substring (LCS) — weight 0.55** Find the longest contiguous run of matching chord names between the query and a song section sequence. Normalize by query length.
+
 - `["Am","F","C","G"]` vs `["Am","F","C","G","Am","F","C","G"]` → 4/4 = **1.0**
 - `["Am","F","C","G"]` vs `["C","G","Am","F","C","G","Am"]` → 4/4 = **1.0** (rotation)
 - `["Am","F","C","G"]` vs `["Am","F","G","C","D"]` → 2/4 = **0.5**
-1. **Bag-of-chords Jaccard — weight 0.25**
-   Treat both sequences as multisets. Score = `|intersection| / |union|`. Captures songs that use the same chord names in a different order.
+
+1. **Bag-of-chords Jaccard — weight 0.25** Treat both sequences as multisets. Score = `|intersection| / |union|`. Captures songs that use the same chord names in a different order.
+
 - `{Am,F,C,G}` vs `{Am,F,C,G,G,G}` → 4/5 = **0.8**
 - `{Am,F,C,G}` vs `{Am,C,G,D}` → 3/5 = **0.6**
-1. **Levenshtein edit distance — weight 0.20**
-   Each chord name is one token. Normalized: `1 - editDistance / max(|query|, |section|)`. Penalizes insertions, deletions, substitutions.
+
+1. **Levenshtein edit distance — weight 0.20** Each chord name is one token. Normalized: `1 - editDistance / max(|query|, |section|)`. Penalizes insertions, deletions, substitutions.
 
 **Rarity weighting:** multiply each matching chord’s contribution by its IDF across the corpus. Common chords (`G`, `C`, `Am`, `D`) contribute less; rare chords (`Bdim`, `G#m`, `Bbm`) contribute more. A match on a rare chord is stronger evidence.
 
@@ -366,7 +529,7 @@ The user picks a song first and explores its structure.
 
 ### Song data model
 
-```ts
+```
 interface Song {
   id: string;                         // "beatles-let-it-be"
   title: string;
@@ -404,7 +567,7 @@ interface SongBar {
 
 ### Matching engine — implementation sketch
 
-```ts
+```
 // lib/matching/score.ts
 
 function scoreSection(query: string[], section: SongSection): number {
@@ -545,7 +708,7 @@ Runs synchronously in-browser for ≤ 500 songs (< 10 ms). Move to a Web Worker 
 
 **Worker file (`workers/matcher.worker.ts`):**
 
-```ts
+```
 import * as Comlink from "comlink";
 import init, { set_corpus, match_songs } from "matcher-wasm";
 
@@ -570,7 +733,7 @@ Comlink.expose(api);
 
 **`next.config.mjs` addition (required):**
 
-```js
+```
 webpack: (config) => {
   config.experiments = { ...config.experiments, asyncWebAssembly: true, layers: true };
   config.output.webassemblyModuleFilename = "static/wasm/[modulehash].wasm";
@@ -696,7 +859,7 @@ The most important translation surface. These terms appear in chord cards, theor
 
 Each file follows a namespaced flat structure:
 
-```json
+```
 {
   "tabs": {
     "table": "Tabla",
@@ -720,7 +883,16 @@ Each file follows a namespaced flat structure:
   "chord_card": {
     "hidden_label": "posición oculta",
     "patterns": "Patrones",
-    "hide_patterns": "Ocultar"
+    "hide_patterns": "Ocultar",
+    "barre_badge": "cejilla",
+    "alternatives_button": "Alternativas",
+    "inversion_root": "Posición fundamental",
+    "inversion_1st": "1ª inversión (3ª en el bajo)",
+    "inversion_2nd": "2ª inversión (5ª en el bajo)",
+    "inversion_3rd": "3ª inversión (7ª en el bajo)",
+    "no_barre": "sin cejilla",
+    "partial_barre": "cejilla parcial",
+    "full_barre": "cejilla completa"
   },
   "degrees": {
     "quality_major": "Mayor",
@@ -754,7 +926,7 @@ Each file follows a namespaced flat structure:
 
 Library: **`next-intl`** (`npm i next-intl`). Works natively with Next.js 14 App Router. Locale stored in Zustand settings store, not in the URL — the app is a tool, not a content site.
 
-```ts
+```
 // stores/useSettingsStore.ts
 interface SettingsStore {
   locale: 'es' | 'en' | 'ru';
@@ -782,7 +954,8 @@ The `useTranslations` hook from `next-intl` is called inside components. Because
 |i18n                        |`next-intl`                                 |App Router native, locale from store not URL                                         |
 |Chord data                  |`@tombatossals/chords-db` (MIT)             |2,141 voicings, 552 chords with MIDI                                                 |
 |Chord diagrams              |Custom SVG component                        |Full control over rendering                                                          |
-|Music theory (JS)           |`tonal` (MIT)                               |`Key.majorKey()`, `Chord.get()`, Roman numeral display                               |
+|Music theory (JS)           |`tonal` (MIT)                               |`Key.majorKey()`, `Chord.get()`, Roman numeral display, inversion voicing generation |
+|**Voicing search**          |**TypeScript (main thread)**                |**Candidate set per chord is small (≤ 30); no WASM needed for inversion search**     |
 |**Song matching engine**    |**Rust → WASM via `wasm-pack --target web`**|**LCS + Jaccard + Levenshtein + IDF in Rust, compiled to WASM, runs in a Web Worker**|
 |**Worker RPC**              |**`comlink`**                               |**Typed async proxy over `postMessage`; no manual message handling**                 |
 |**Serde (Rust/JS boundary)**|**`serde-wasm-bindgen` 0.6 + `serde_json`** |**Corpus sent once as JSON string; results via `serde_wasm_bindgen::to_value`**      |
@@ -843,6 +1016,8 @@ The `useTranslations` hook from `next-intl` is called inside components. Because
 
 /lib
   /theory/
+    inversions.ts                     ← generateVoicings(), detectBarre(), difficultyScore()
+    voiceLeading.ts                   ← voiceLeadingScore(), suggestVoicings()
   /strum/
   /i18n/
   /songs/
@@ -866,18 +1041,47 @@ The `useTranslations` hook from `next-intl` is called inside components. Because
 
 ### Data Models (TypeScript)
 
-```ts
+```
 type StrumCell = '' | '↓' | '↑' | '✕';
+
+type Inversion = 'root' | '1st' | '2nd' | '3rd';
+type StringIndex = 0 | 1 | 2 | 3 | 4 | 5;   // 0 = low E, 5 = high e
+
+interface FretPosition {
+  string: StringIndex;
+  fret: number;
+  note: string;                       // scientific pitch, e.g. "A3"
+  role: 'root' | '3rd' | '5th' | '7th';
+  finger?: 1 | 2 | 3 | 4 | 'barre';
+}
+
+interface GuitarVoicing {
+  chord: string;                      // "F"
+  symbol: string;                     // "F/A" or "F"
+  bass: string;                       // "A3"
+  inversion: Inversion;
+  positions: FretPosition[];
+  mutedStrings: StringIndex[];
+  hasBarre: boolean;
+  isPartialBarre: boolean;
+  barreAt?: number;
+  fretSpan: number;
+  difficultyScore: number;            // 0–100; lower = easier
+}
 
 interface HarmonyChord {
   id: string;
-  name: string;       // "Am"
-  degree: string;     // "vi"
-  key: string;        // "C"
+  name: string;                       // "F"
+  degree: string;                     // "IV"
+  key: string;                        // "C"
   mode: 'major' | 'minor';
   strumPattern: StrumCell[];
-  bars?: number;      // Stage 2
-  voicing?: number;   // Stage 2: index into chords-db positions[]
+  bars?: number;                      // Stage 2: duration in bars
+  // voicing state (Stage 2)
+  voicingId?: string;                 // chords-db position index or generated voicing id
+  voicingSymbol?: string;             // "F/A" — shown in chord header and timeline
+  voicingInversion?: Inversion;
+  voicingHasBarre?: boolean;
 }
 
 interface Harmony {
@@ -899,6 +1103,7 @@ interface HarmonyStore {
   removeChord: (id: string) => void;
   moveChord: (id: string, dir: -1 | 1) => void;
   updatePattern: (id: string, pattern: StrumCell[]) => void;
+  updateVoicing: (id: string, voicing: GuitarVoicing) => void;  // NEW
   saveHarmony: () => void;
   loadHarmony: (id: string) => void;
   deleteHarmony: (id: string) => void;
@@ -921,12 +1126,14 @@ interface HarmonyStore {
 
 ## Decisions Log
 
-|Question              |Stage 1                                                          |Stage 2                                                                                                                  |
-|----------------------|-----------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------|
-|**Keys**              |7 natural keys only (C D E F G A B) matching the reference images|All 12 chromatic keys: add Bb, Eb, Ab, Db, F#/Gb, C#/Db, G#/Ab                                                           |
-|**Strumming notation**|Simple ↓ ↑ ✕ direction symbols, one chord = one bar              |Full classical right-hand notation: p i m a finger labels, arpeggio builder, mixed chord durations (½ bar, 1 bar, 2 bars)|
-|**Harmony structure** |Flat ordered list of chords                                      |Named sections (Intro, Verso, Estribillo, Puente, Outro) with independent repeat counts per section                      |
-|**Chord duration**    |One chord = one bar, fixed                                       |Per-chord duration in bars: ½, 1, 2, 4; two chords can share a bar                                                       |
+|Question              |Stage 1                                                          |Stage 2                                                                                                                       |
+|----------------------|-----------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------|
+|**Keys**              |7 natural keys only (C D E F G A B) matching the reference images|All 12 chromatic keys: add Bb, Eb, Ab, Db, F#/Gb, C#/Db, G#/Ab                                                                |
+|**Strumming notation**|Simple ↓ ↑ ✕ direction symbols, one chord = one bar              |Full classical right-hand notation: p i m a finger labels, arpeggio builder, mixed chord durations (½ bar, 1 bar, 2 bars)     |
+|**Harmony structure** |Flat ordered list of chords                                      |Named sections (Intro, Verso, Estribillo, Puente, Outro) with independent repeat counts per section                           |
+|**Chord duration**    |One chord = one bar, fixed                                       |Per-chord duration in bars: ½, 1, 2, 4; two chords can share a bar                                                            |
+|**Inversions**        |Not available                                                    |Barre-chord detection + “Alternativas” sheet showing easier voicings; CAGED shape names shown as informational labels only    |
+|**Voice leading**     |Not available                                                    |Per-transition score (0–100); recalculates when user changes voicing; one-tap “Optimize voicings” across the whole progression|
 
 ### What this means concretely
 
@@ -944,4 +1151,5 @@ interface HarmonyStore {
 - StrumGrid upgrades to a right-hand finger grid: rows = p/i/m/a, columns = 16th-note subdivisions
 - Arpeggio mode: user places one note per finger per subdivision to build classical picking patterns
 - Common arpeggio templates: p-i-m-a, p-a-m-i, tremolo (p-a-m-i-a-m-i), alternating bass (p-i-p-m)
+- **Barre detection + inversion alternatives (“Alternativas” bottom sheet) are the primary Stage 2 UX win** — they solve the most common real frustration: hitting a barre chord you can’t play yet
 - CAGED voicing selector and voice leading engine require all 12 keys to be meaningful
