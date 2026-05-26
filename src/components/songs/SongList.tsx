@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import { useSongsStore } from "@/stores/useSongsStore";
+import { useHarmonyStore } from "@/stores/useHarmonyStore";
 import { SongCard } from "./SongCard";
 import { SongFilters } from "./SongFilters";
 import { HarmonySearchBar } from "./HarmonySearchBar";
@@ -16,7 +17,9 @@ export function SongList() {
   const query = useSongsStore((s) => s.query);
   const isSearchMode = useSongsStore((s) => s.isSearchMode);
   const setSearchMode = useSongsStore((s) => s.setSearchMode);
+  const setQuery = useSongsStore((s) => s.setQuery);
   const getFilteredSongs = useSongsStore((s) => s.getFilteredSongs);
+  const harmonyChords = useHarmonyStore((s) => s.current.chords);
   const [showFilters, setShowFilters] = useState(false);
 
   const filteredSongs = useMemo(() => getFilteredSongs(), [getFilteredSongs]);
@@ -40,7 +43,13 @@ export function SongList() {
       <div className="flex items-center justify-between">
         <h2 className="font-heading text-lg text-mahogany-100">{t("title")}</h2>
         <button
-          onClick={() => setSearchMode(!isSearchMode)}
+          onClick={() => {
+            const entering = !isSearchMode;
+            if (entering && query.length === 0 && harmonyChords.length >= 2) {
+              setQuery(harmonyChords.map((c) => c.name));
+            }
+            setSearchMode(entering);
+          }}
           className={`px-3 py-1 rounded-lg text-xs font-mono transition-colors ${
             isSearchMode
               ? "bg-amber-500 text-mahogany-950"
