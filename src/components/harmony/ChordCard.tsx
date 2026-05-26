@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { HarmonyChord, TimeSignature, StrumCell } from '@/types';
+import { HarmonyChord, TimeSignature, Beat } from '@/types';
 import { useSettingsStore } from '@/stores/useSettingsStore';
 import { ChordDiagram } from '@/components/chord-diagram/ChordDiagram';
 import { StrumGrid } from './StrumGrid';
@@ -14,9 +14,10 @@ interface ChordCardProps {
   isLast: boolean;
   onMove: (dir: -1 | 1) => void;
   onRemove: () => void;
-  onUpdatePattern: (pattern: StrumCell[]) => void;
+  onUpdatePattern: (pattern: Beat[]) => void;
   isActive?: boolean;
   activeBeat?: number;
+  activeCell?: number;
 }
 
 export function ChordCard({
@@ -29,6 +30,7 @@ export function ChordCard({
   onUpdatePattern,
   isActive = false,
   activeBeat = -1,
+  activeCell = -1,
 }: ChordCardProps) {
   const showFingering = useSettingsStore((s) => s.showFingering);
   const [showNotes, setShowNotes] = useState(false);
@@ -87,6 +89,7 @@ export function ChordCard({
             timeSignature={timeSignature}
             onChange={onUpdatePattern}
             activeBeat={isActive ? activeBeat : -1}
+            activeCell={isActive ? activeCell : -1}
           />
         </div>
       </div>

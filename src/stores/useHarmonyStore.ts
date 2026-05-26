@@ -1,8 +1,8 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { v4 as uuidv4 } from "uuid";
-import { Harmony, HarmonyChord, StrumCell, TimeSignature } from "@/types";
-import { getEmptyPattern } from "@/lib/strum/presets";
+import { Harmony, HarmonyChord, Beat, TimeSignature } from "@/types";
+import { getEmptyPattern, migrateOldPattern } from "@/lib/strum/presets";
 import { usePlaybackStore } from "@/stores/usePlaybackStore";
 
 const DEFAULT_BPM = 80;
@@ -18,13 +18,20 @@ function createEmptyHarmony(): Harmony {
   };
 }
 
+function migrateChord(chord: Record<string, unknown>): Record<string, unknown> {
+  const pattern = chord.strumPattern;
+  if (!Array.isArray(pattern) || pattern.length === 0) return chord;
+  if (typeof pattern[0] === "object" && pattern[0] !== null) return chord;
+  return { ...chord, strumPattern: migrateOldPattern(pattern as string[]) };
+}
+
 interface HarmonyState {
   current: Harmony;
   saved: Harmony[];
   addChord: (chord: Omit<HarmonyChord, "id" | "strumPattern">) => void;
   removeChord: (id: string) => void;
   moveChord: (id: string, dir: -1 | 1) => void;
-  updatePattern: (id: string, pattern: StrumCell[]) => void;
+  updatePattern: (id: string, pattern: Beat[]) => void;
   setName: (name: string) => void;
   setBpm: (bpm: number) => void;
   setTimeSignature: (ts: TimeSignature) => void;
@@ -139,6 +146,26 @@ export const useHarmonyStore = create<HarmonyState>()(
 
       setCurrent: (harmony) => set({ current: harmony }),
     }),
-    { name: "guitar-harmony-data" },
+    {
+      name: "guitar-harmony-data",
+      version: 1,
+      migrate: (persisted: unknown, version: number) => {
+        const state = persisted as Record<string, unknown>;
+        if (version === 0) {
+          const current = state.current as Record<string, unknown> | undefined;
+          if (current?.chords && Array.isArray(current.chords)) {
+            current.chords = current.chords.map(migrateChord);
+          }
+          const saved = state.saved as Array<Record<string, unknown>> | undefined;
+          if (saved) {
+            state.saved = saved.map((h) => ({
+              ...h,
+              chords: Array.isArray(h.chords) ? h.chords.map(migrateChord) : [],
+            }));
+          }
+        }
+        return state;
+      },
+    },
   ),
 );

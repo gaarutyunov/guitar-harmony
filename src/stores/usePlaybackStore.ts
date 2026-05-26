@@ -11,6 +11,7 @@ interface PlaybackState {
   isPlaying: boolean;
   currentChordIndex: number;
   currentBeat: number;
+  currentCell: number;
   currentRepetition: number;
 
   setBpm: (bpm: number) => void;
@@ -22,6 +23,7 @@ interface PlaybackState {
   setPosition: (
     chordIndex: number,
     beat: number,
+    cell: number,
     rep: number
   ) => void;
   resetPosition: () => void;
@@ -39,6 +41,7 @@ export const usePlaybackStore = create<PlaybackState>()(
       isPlaying: false,
       currentChordIndex: -1,
       currentBeat: -1,
+      currentCell: -1,
       currentRepetition: 0,
 
       setBpm: (bpm) =>
@@ -52,10 +55,11 @@ export const usePlaybackStore = create<PlaybackState>()(
       setRepetitions: (n) =>
         set({ repetitionsPerChord: Math.max(1, Math.min(8, n)) }),
       setPlaying: (playing) => set({ isPlaying: playing }),
-      setPosition: (chordIndex, beat, rep) =>
+      setPosition: (chordIndex, beat, cell, rep) =>
         set({
           currentChordIndex: chordIndex,
           currentBeat: beat,
+          currentCell: cell,
           currentRepetition: rep,
         }),
       resetPosition: () =>
@@ -63,6 +67,7 @@ export const usePlaybackStore = create<PlaybackState>()(
           isPlaying: false,
           currentChordIndex: -1,
           currentBeat: -1,
+          currentCell: -1,
           currentRepetition: 0,
         }),
     }),

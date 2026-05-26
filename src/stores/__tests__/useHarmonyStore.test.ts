@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { useHarmonyStore } from "@/stores/useHarmonyStore";
+import type { Beat } from "@/types";
 
 describe("useHarmonyStore", () => {
   beforeEach(() => {
@@ -22,13 +23,17 @@ describe("useHarmonyStore", () => {
     expect(state.current.name).toBe("");
   });
 
-  it("adds a chord", () => {
+  it("adds a chord with 4 beats for 4/4", () => {
     const { addChord } = useHarmonyStore.getState();
     addChord({ name: "Am", degree: "vi", key: "C", mode: "major" });
     const state = useHarmonyStore.getState();
     expect(state.current.chords).toHaveLength(1);
     expect(state.current.chords[0].name).toBe("Am");
-    expect(state.current.chords[0].strumPattern).toHaveLength(8);
+    expect(state.current.chords[0].strumPattern).toHaveLength(4);
+    state.current.chords[0].strumPattern.forEach((beat) => {
+      expect(beat.type).toBe("negra");
+      expect(beat.cells).toHaveLength(1);
+    });
   });
 
   it("removes a chord", () => {
@@ -60,18 +65,18 @@ describe("useHarmonyStore", () => {
     expect(useHarmonyStore.getState().current.name).toBe("My Harmony");
   });
 
-  it("changes time signature and resizes patterns", () => {
+  it("changes time signature and resets patterns to 3 beats for 3/4", () => {
     const { addChord } = useHarmonyStore.getState();
     addChord({ name: "Am", degree: "vi", key: "C", mode: "major" });
     expect(
       useHarmonyStore.getState().current.chords[0].strumPattern,
-    ).toHaveLength(8);
+    ).toHaveLength(4);
 
     useHarmonyStore.getState().setTimeSignature("3/4");
     expect(useHarmonyStore.getState().current.timeSignature).toBe("3/4");
     expect(
       useHarmonyStore.getState().current.chords[0].strumPattern,
-    ).toHaveLength(6);
+    ).toHaveLength(3);
   });
 
   it("saves and loads a harmony", () => {
@@ -114,13 +119,19 @@ describe("useHarmonyStore", () => {
     expect(useHarmonyStore.getState().saved).toHaveLength(0);
   });
 
-  it("updates strum pattern", () => {
+  it("updates strum pattern with Beat[]", () => {
     const { addChord, updatePattern } = useHarmonyStore.getState();
     addChord({ name: "Am", degree: "vi", key: "C", mode: "major" });
     const chordId = useHarmonyStore.getState().current.chords[0].id;
-    updatePattern(chordId, ["↓", "", "↓", "↑", "", "↑", "↓", "↑"]);
-    expect(useHarmonyStore.getState().current.chords[0].strumPattern[0]).toBe(
-      "↓",
-    );
+    const newPattern: Beat[] = [
+      { type: "corchea", cells: ["↓", ""] },
+      { type: "corchea", cells: ["↓", "↑"] },
+      { type: "corchea", cells: ["", "↑"] },
+      { type: "corchea", cells: ["↓", "↑"] },
+    ];
+    updatePattern(chordId, newPattern);
+    expect(
+      useHarmonyStore.getState().current.chords[0].strumPattern[0].cells[0],
+    ).toBe("↓");
   });
 });

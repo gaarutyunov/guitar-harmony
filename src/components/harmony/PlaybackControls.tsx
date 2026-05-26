@@ -5,6 +5,7 @@ import { useTranslations } from 'next-intl';
 import { usePlaybackStore } from '@/stores/usePlaybackStore';
 import { useHarmonyStore } from '@/stores/useHarmonyStore';
 import { chordDatabase } from '@/data/chords';
+import { getActiveCellIndex } from '@/lib/strum/presets';
 import {
   ensureAudioReady,
   getChordFrequencies,
@@ -35,7 +36,7 @@ export function PlaybackControls() {
   const resetPosition = usePlaybackStore((s) => s.resetPosition);
 
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const stateRef = useRef({ chordIdx: 0, beat: 0, rep: 0 });
+  const stateRef = useRef({ chordIdx: 0, tick: 0, rep: 0 });
 
   const stop = useCallback(() => {
     if (timeoutRef.current) {
@@ -48,7 +49,7 @@ export function PlaybackControls() {
   const tick = useCallback(() => {
     const store = usePlaybackStore.getState();
     const harmony = useHarmonyStore.getState().current;
-    const { chordIdx, beat, rep } = stateRef.current;
+    const { chordIdx, tick: tickPos, rep } = stateRef.current;
 
     if (chordIdx >= harmony.chords.length) {
       stop();
@@ -56,29 +57,42 @@ export function PlaybackControls() {
     }
 
     const chord = harmony.chords[chordIdx];
-    setPosition(chordIdx, beat, rep);
+    const numBeats = chord.strumPattern.length;
+    const totalTicks = numBeats * 4;
 
-    if (store.metronomeEnabled && beat % 2 === 0) {
-      playMetronomeClick(beat === 0);
-    }
+    const beatIdx = Math.floor(tickPos / 4);
+    const subBeat = tickPos % 4;
+    const beat = chord.strumPattern[beatIdx];
 
-    if (store.audioEnabled) {
-      const cell = chord.strumPattern[beat];
-      if (cell && (cell as string) !== '') {
-        const chordData = chordDatabase[chord.name];
-        if (chordData?.positions[0]) {
-          const freqs = getChordFrequencies(chordData.positions[0]);
-          playChordStrum(freqs, cell, chord.name);
+    if (beat) {
+      if (store.metronomeEnabled && subBeat === 0) {
+        playMetronomeClick(beatIdx === 0);
+      }
+
+      const cellIdx = getActiveCellIndex(beat, subBeat);
+
+      if (cellIdx !== null) {
+        setPosition(chordIdx, beatIdx, cellIdx, rep);
+
+        if (store.audioEnabled) {
+          const cell = beat.cells[cellIdx];
+          if (cell && (cell as string) !== '') {
+            const chordData = chordDatabase[chord.name];
+            if (chordData?.positions[0]) {
+              const freqs = getChordFrequencies(chordData.positions[0]);
+              playChordStrum(freqs, cell, chord.name);
+            }
+          }
         }
       }
     }
 
-    let nextBeat = beat + 1;
+    let nextTick = tickPos + 1;
     let nextChordIdx = chordIdx;
     let nextRep = rep;
 
-    if (nextBeat >= chord.strumPattern.length) {
-      nextBeat = 0;
+    if (nextTick >= totalTicks) {
+      nextTick = 0;
       nextRep += 1;
       if (nextRep >= store.repetitionsPerChord) {
         nextRep = 0;
@@ -89,12 +103,12 @@ export function PlaybackControls() {
           } else {
             stateRef.current = {
               chordIdx: nextChordIdx,
-              beat: 0,
+              tick: 0,
               rep: 0,
             };
             timeoutRef.current = setTimeout(() => {
               stop();
-            }, 60000 / (store.bpm * 2));
+            }, 60000 / (store.bpm * 4));
             return;
           }
         }
@@ -103,18 +117,18 @@ export function PlaybackControls() {
 
     stateRef.current = {
       chordIdx: nextChordIdx,
-      beat: nextBeat,
+      tick: nextTick,
       rep: nextRep,
     };
 
-    const eighthNoteDuration = 60000 / (store.bpm * 2);
-    timeoutRef.current = setTimeout(tick, eighthNoteDuration);
+    const sixteenthNoteDuration = 60000 / (store.bpm * 4);
+    timeoutRef.current = setTimeout(tick, sixteenthNoteDuration);
   }, [setPosition, stop]);
 
   const play = useCallback(() => {
     if (chords.length === 0) return;
     ensureAudioReady();
-    stateRef.current = { chordIdx: 0, beat: 0, rep: 0 };
+    stateRef.current = { chordIdx: 0, tick: 0, rep: 0 };
     setPlaying(true);
     tick();
   }, [chords.length, setPlaying, tick]);
