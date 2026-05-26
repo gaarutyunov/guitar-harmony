@@ -33,6 +33,7 @@ export function SongDetail() {
   const setQuery = useSongsStore((s) => s.setQuery);
   const setSearchMode = useSongsStore((s) => s.setSearchMode);
   const addChord = useHarmonyStore((s) => s.addChord);
+  const setName = useHarmonyStore((s) => s.setName);
   const clearCurrent = useHarmonyStore((s) => s.clearCurrent);
   const mode = useSettingsStore((s) => s.mode);
 
@@ -77,6 +78,7 @@ export function SongDetail() {
 
     if (!song) return;
     clearCurrent();
+    setName(`${song.artist} - ${song.title}`);
     for (const bar of bars) {
       for (const chordName of bar.chords) {
         addChord({
