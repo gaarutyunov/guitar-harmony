@@ -1,8 +1,8 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { v4 as uuidv4 } from "uuid";
-import { ChordPosition, Harmony, HarmonyChord, Inversion, Beat, TimeSignature } from "@/types";
-import { getEmptyPattern, migrateOldPattern } from "@/lib/strum/presets";
+import { ChordPosition, Harmony, HarmonyChord, Inversion, StrumCell, BeatType, TimeSignature } from "@/types";
+import { getEmptyPattern, getDefaultBeatTypes } from "@/lib/strum/presets";
 import { usePlaybackStore } from "@/stores/usePlaybackStore";
 
 const DEFAULT_BPM = 80;
@@ -18,20 +18,51 @@ function createEmptyHarmony(): Harmony {
   };
 }
 
-function migrateChord(chord: Record<string, unknown>): Record<string, unknown> {
+function migrateChordPattern(chord: Record<string, unknown>): Record<string, unknown> {
   const pattern = chord.strumPattern;
-  if (!Array.isArray(pattern) || pattern.length === 0) return chord;
-  if (typeof pattern[0] === "object" && pattern[0] !== null) return chord;
-  return { ...chord, strumPattern: migrateOldPattern(pattern as string[]) };
+  if (!pattern || !Array.isArray(pattern)) return chord;
+
+  if (typeof pattern[0] === "string" && (pattern.length === 16 || pattern.length === 12) && chord.beatTypes) {
+    return chord;
+  }
+
+  if (typeof pattern[0] === "object" && pattern[0] !== null) {
+    const beats = pattern as { type: string; cells: string[] }[];
+    const flat: string[] = [];
+    const types: string[] = [];
+    for (const beat of beats) {
+      types.push(beat.type);
+      if (beat.type === "corchea") {
+        flat.push(beat.cells[0] || "", "", beat.cells[1] || "", "");
+      } else if (beat.type === "semicorchea") {
+        flat.push(beat.cells[0] || "", beat.cells[1] || "", beat.cells[2] || "", beat.cells[3] || "");
+      } else {
+        flat.push(beat.cells[0] || "", "", "", "");
+      }
+    }
+    return { ...chord, strumPattern: flat, beatTypes: types };
+  }
+
+  if (typeof pattern[0] === "string" && (pattern.length === 8 || pattern.length === 6)) {
+    const expanded: string[] = [];
+    for (let i = 0; i < pattern.length; i += 2) {
+      expanded.push(pattern[i] || "", "", pattern[i + 1] || "", "");
+    }
+    const numBeats = pattern.length === 8 ? 4 : 3;
+    return { ...chord, strumPattern: expanded, beatTypes: new Array(numBeats).fill("corchea") };
+  }
+
+  return chord;
 }
 
 interface HarmonyState {
   current: Harmony;
   saved: Harmony[];
-  addChord: (chord: Omit<HarmonyChord, "id" | "strumPattern">) => void;
+  addChord: (chord: Omit<HarmonyChord, "id" | "strumPattern" | "beatTypes">) => void;
   removeChord: (id: string) => void;
   moveChord: (id: string, dir: -1 | 1) => void;
-  updatePattern: (id: string, pattern: Beat[]) => void;
+  updatePattern: (id: string, pattern: StrumCell[]) => void;
+  updateBeatTypes: (id: string, beatTypes: BeatType[]) => void;
   updateVoicing: (id: string, voicingId: string, voicingSymbol: string, voicingInversion: Inversion, voicingHasBarre: boolean, voicingPosition: ChordPosition) => void;
   setName: (name: string) => void;
   setBpm: (bpm: number) => void;
@@ -59,6 +90,7 @@ export const useHarmonyStore = create<HarmonyState>()(
                 ...chord,
                 id: uuidv4(),
                 strumPattern: getEmptyPattern(state.current.timeSignature),
+                beatTypes: getDefaultBeatTypes(state.current.timeSignature),
               },
             ],
           },
@@ -93,6 +125,16 @@ export const useHarmonyStore = create<HarmonyState>()(
           },
         })),
 
+      updateBeatTypes: (id, beatTypes) =>
+        set((state) => ({
+          current: {
+            ...state.current,
+            chords: state.current.chords.map((c) =>
+              c.id === id ? { ...c, beatTypes } : c,
+            ),
+          },
+        })),
+
       updateVoicing: (id, voicingId, voicingSymbol, voicingInversion, voicingHasBarre, voicingPosition) =>
         set((state) => ({
           current: {
@@ -121,6 +163,7 @@ export const useHarmonyStore = create<HarmonyState>()(
             chords: state.current.chords.map((c) => ({
               ...c,
               strumPattern: getEmptyPattern(ts),
+              beatTypes: getDefaultBeatTypes(ts),
             })),
           },
         })),
@@ -161,19 +204,19 @@ export const useHarmonyStore = create<HarmonyState>()(
     }),
     {
       name: "guitar-harmony-data",
-      version: 1,
+      version: 2,
       migrate: (persisted: unknown, version: number) => {
         const state = persisted as Record<string, unknown>;
-        if (version === 0) {
+        if (version < 2) {
           const current = state.current as Record<string, unknown> | undefined;
           if (current?.chords && Array.isArray(current.chords)) {
-            current.chords = current.chords.map(migrateChord);
+            current.chords = current.chords.map(migrateChordPattern);
           }
           const saved = state.saved as Array<Record<string, unknown>> | undefined;
           if (saved) {
             state.saved = saved.map((h) => ({
               ...h,
-              chords: Array.isArray(h.chords) ? h.chords.map(migrateChord) : [],
+              chords: Array.isArray(h.chords) ? h.chords.map(migrateChordPattern) : [],
             }));
           }
         }

@@ -1,90 +1,90 @@
-import { StrumCell, Beat, BeatType, TimeSignature } from '@/types';
+import { StrumCell, BeatType, TimeSignature } from '@/types';
 
 export interface StrumPreset {
   id: string;
   nameKey: string;
-  pattern: Beat[];
+  pattern: StrumCell[];
+  beatTypes: BeatType[];
   timeSignature: TimeSignature;
 }
 
-function b(type: BeatType, ...cells: StrumCell[]): Beat {
-  return { type, cells };
-}
-
+// prettier-ignore
 export const strumPresets: StrumPreset[] = [
   {
     id: 'quarter-notes-44',
     nameKey: 'quarter_notes',
-    pattern: [b('negra', '↓'), b('negra', '↓'), b('negra', '↓'), b('negra', '↓')],
+    beatTypes: ['negra', 'negra', 'negra', 'negra'],
+    pattern: ['↓','','','', '↓','','','', '↓','','','', '↓','','',''],
     timeSignature: '4/4',
   },
   {
     id: 'eighth-notes-44',
     nameKey: 'eighth_notes',
-    pattern: [b('corchea', '↓', '↑'), b('corchea', '↓', '↑'), b('corchea', '↓', '↑'), b('corchea', '↓', '↑')],
+    beatTypes: ['corchea', 'corchea', 'corchea', 'corchea'],
+    pattern: ['↓','','↑','', '↓','','↑','', '↓','','↑','', '↓','','↑',''],
     timeSignature: '4/4',
   },
   {
     id: 'sixteenth-notes-44',
     nameKey: 'sixteenth_notes',
-    pattern: [
-      b('semicorchea', '↓', '↑', '↓', '↑'),
-      b('semicorchea', '↓', '↑', '↓', '↑'),
-      b('semicorchea', '↓', '↑', '↓', '↑'),
-      b('semicorchea', '↓', '↑', '↓', '↑'),
-    ],
+    beatTypes: ['semicorchea', 'semicorchea', 'semicorchea', 'semicorchea'],
+    pattern: ['↓','↑','↓','↑', '↓','↑','↓','↑', '↓','↑','↓','↑', '↓','↑','↓','↑'],
     timeSignature: '4/4',
   },
   {
     id: 'pop-basic',
     nameKey: 'pop_basic',
-    pattern: [b('corchea', '↓', ''), b('corchea', '↓', '↑'), b('corchea', '', '↑'), b('corchea', '↓', '↑')],
+    beatTypes: ['corchea', 'corchea', 'corchea', 'corchea'],
+    pattern: ['↓','','','', '↓','','↑','', '','','↑','', '↓','','↑',''],
     timeSignature: '4/4',
   },
   {
     id: 'chuck-down',
     nameKey: 'chuck_down',
-    pattern: [b('corchea', '✕', '↓'), b('corchea', '✕', '↓'), b('corchea', '✕', '↓'), b('corchea', '✕', '↓')],
+    beatTypes: ['corchea', 'corchea', 'corchea', 'corchea'],
+    pattern: ['✕','','↓','', '✕','','↓','', '✕','','↓','', '✕','','↓',''],
     timeSignature: '4/4',
   },
   {
     id: 'rasgueado',
     nameKey: 'rasgueado',
-    pattern: [b('corchea', '↓', '↓'), b('corchea', '↑', '↑'), b('corchea', '↓', '↑'), b('corchea', '', '')],
+    beatTypes: ['corchea', 'corchea', 'corchea', 'corchea'],
+    pattern: ['↓','','↓','', '↑','','↑','', '↓','','↑','', '','','',''],
     timeSignature: '4/4',
   },
   {
     id: 'waltz',
     nameKey: 'waltz',
-    pattern: [b('corchea', '↓', ''), b('corchea', '', '↑'), b('corchea', '↑', '')],
+    beatTypes: ['corchea', 'corchea', 'corchea'],
+    pattern: ['↓','','','', '','','↑','', '↑','','',''],
     timeSignature: '3/4',
   },
   {
     id: 'quarter-notes-34',
     nameKey: 'quarter_notes',
-    pattern: [b('negra', '↓'), b('negra', '↓'), b('negra', '↓')],
+    beatTypes: ['negra', 'negra', 'negra'],
+    pattern: ['↓','','','', '↓','','','', '↓','','',''],
     timeSignature: '3/4',
   },
   {
     id: 'eighth-notes-34',
     nameKey: 'eighth_notes',
-    pattern: [b('corchea', '↓', '↑'), b('corchea', '↓', '↑'), b('corchea', '↓', '↑')],
+    beatTypes: ['corchea', 'corchea', 'corchea'],
+    pattern: ['↓','','↑','', '↓','','↑','', '↓','','↑',''],
     timeSignature: '3/4',
   },
   {
     id: 'sixteenth-notes-34',
     nameKey: 'sixteenth_notes',
-    pattern: [
-      b('semicorchea', '↓', '↑', '↓', '↑'),
-      b('semicorchea', '↓', '↑', '↓', '↑'),
-      b('semicorchea', '↓', '↑', '↓', '↑'),
-    ],
+    beatTypes: ['semicorchea', 'semicorchea', 'semicorchea'],
+    pattern: ['↓','↑','↓','↑', '↓','↑','↓','↑', '↓','↑','↓','↑'],
     timeSignature: '3/4',
   },
   {
     id: 'chuck-34',
     nameKey: 'chuck_34',
-    pattern: [b('corchea', '✕', '↓'), b('corchea', '', '↑'), b('corchea', '↓', '↑')],
+    beatTypes: ['corchea', 'corchea', 'corchea'],
+    pattern: ['✕','','↓','', '','','↑','', '↓','','↑',''],
     timeSignature: '3/4',
   },
 ];
@@ -93,21 +93,20 @@ export function getPresetsForTimeSignature(ts: TimeSignature): StrumPreset[] {
   return strumPresets.filter((p) => p.timeSignature === ts);
 }
 
+export function getEmptyPattern(ts: TimeSignature): StrumCell[] {
+  return new Array(ts === '4/4' ? 16 : 12).fill('') as StrumCell[];
+}
+
+export function getDefaultBeatTypes(ts: TimeSignature): BeatType[] {
+  return new Array(ts === '4/4' ? 4 : 3).fill('negra') as BeatType[];
+}
+
 export function cellCountForType(type: BeatType): number {
   switch (type) {
     case 'negra': return 1;
     case 'corchea': return 2;
     case 'semicorchea': return 4;
   }
-}
-
-export function createEmptyBeat(type: BeatType = 'negra'): Beat {
-  return { type, cells: new Array(cellCountForType(type)).fill('') as StrumCell[] };
-}
-
-export function getEmptyPattern(ts: TimeSignature): Beat[] {
-  const numBeats = ts === '4/4' ? 4 : 3;
-  return Array.from({ length: numBeats }, () => createEmptyBeat());
 }
 
 export function cycleStrumCell(cell: StrumCell): StrumCell {
@@ -122,32 +121,40 @@ export function cycleBeatType(type: BeatType): BeatType {
   return order[(idx + 1) % order.length];
 }
 
-export function changeBeatType(beat: Beat, newType: BeatType): Beat {
-  if (beat.type === newType) return beat;
-  const newCount = cellCountForType(newType);
-  const newCells: StrumCell[] = new Array(newCount).fill('');
-
-  if (beat.type === 'negra' && newType === 'corchea') {
-    newCells[0] = beat.cells[0];
-  } else if (beat.type === 'negra' && newType === 'semicorchea') {
-    newCells[0] = beat.cells[0];
-  } else if (beat.type === 'corchea' && newType === 'semicorchea') {
-    newCells[0] = beat.cells[0];
-    newCells[2] = beat.cells[1];
-  } else if (beat.type === 'semicorchea' && newType === 'corchea') {
-    newCells[0] = beat.cells[0];
-    newCells[1] = beat.cells[2];
-  } else if (beat.type === 'semicorchea' && newType === 'negra') {
-    newCells[0] = beat.cells[0];
-  } else if (beat.type === 'corchea' && newType === 'negra') {
-    newCells[0] = beat.cells[0];
+export function cellToOffset(beatType: BeatType, cellIdx: number): number {
+  switch (beatType) {
+    case 'negra': return 0;
+    case 'corchea': return cellIdx * 2;
+    case 'semicorchea': return cellIdx;
   }
-
-  return { type: newType, cells: newCells };
 }
 
-export function getActiveCellIndex(beat: Beat, subBeat: number): number | null {
-  switch (beat.type) {
+export function getDisplayCells(
+  pattern: StrumCell[],
+  beatIdx: number,
+  beatType: BeatType,
+): { cell: StrumCell; flatIdx: number }[] {
+  const base = beatIdx * 4;
+  switch (beatType) {
+    case 'negra':
+      return [{ cell: pattern[base], flatIdx: base }];
+    case 'corchea':
+      return [
+        { cell: pattern[base], flatIdx: base },
+        { cell: pattern[base + 2], flatIdx: base + 2 },
+      ];
+    case 'semicorchea':
+      return [
+        { cell: pattern[base], flatIdx: base },
+        { cell: pattern[base + 1], flatIdx: base + 1 },
+        { cell: pattern[base + 2], flatIdx: base + 2 },
+        { cell: pattern[base + 3], flatIdx: base + 3 },
+      ];
+  }
+}
+
+export function getActiveCellIndex(beatType: BeatType, subBeat: number): number | null {
+  switch (beatType) {
     case 'negra':
       return subBeat === 0 ? 0 : null;
     case 'corchea':
@@ -159,13 +166,20 @@ export function getActiveCellIndex(beat: Beat, subBeat: number): number | null {
   }
 }
 
-export function migrateOldPattern(old: string[]): Beat[] {
-  const beats: Beat[] = [];
-  for (let i = 0; i < old.length; i += 2) {
-    beats.push({
-      type: 'corchea',
-      cells: [(old[i] || '') as StrumCell, (old[i + 1] || '') as StrumCell],
-    });
+export function cleanPatternForBeatType(
+  pattern: StrumCell[],
+  beatIdx: number,
+  newType: BeatType,
+): StrumCell[] {
+  const newPattern = [...pattern];
+  const base = beatIdx * 4;
+  if (newType === 'negra') {
+    newPattern[base + 1] = '';
+    newPattern[base + 2] = '';
+    newPattern[base + 3] = '';
+  } else if (newType === 'corchea') {
+    newPattern[base + 1] = '';
+    newPattern[base + 3] = '';
   }
-  return beats;
+  return newPattern;
 }

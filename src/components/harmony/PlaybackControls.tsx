@@ -5,7 +5,7 @@ import { useTranslations } from 'next-intl';
 import { usePlaybackStore } from '@/stores/usePlaybackStore';
 import { useHarmonyStore } from '@/stores/useHarmonyStore';
 import { chordDatabase } from '@/data/chords';
-import { getActiveCellIndex } from '@/lib/strum/presets';
+import { getActiveCellIndex, getDefaultBeatTypes } from '@/lib/strum/presets';
 import {
   ensureAudioReady,
   getChordFrequencies,
@@ -16,6 +16,7 @@ import {
 export function PlaybackControls() {
   const t = useTranslations('playback');
   const chords = useHarmonyStore((s) => s.current.chords);
+  const timeSignature = useHarmonyStore((s) => s.current.timeSignature);
 
   const isPlaying = usePlaybackStore((s) => s.isPlaying);
   const bpm = usePlaybackStore((s) => s.bpm);
@@ -57,25 +58,26 @@ export function PlaybackControls() {
     }
 
     const chord = harmony.chords[chordIdx];
-    const numBeats = chord.strumPattern.length;
+    const beatTypes = chord.beatTypes || getDefaultBeatTypes(harmony.timeSignature);
+    const numBeats = beatTypes.length;
     const totalTicks = numBeats * 4;
 
     const beatIdx = Math.floor(tickPos / 4);
     const subBeat = tickPos % 4;
-    const beat = chord.strumPattern[beatIdx];
+    const beatType = beatTypes[beatIdx];
 
-    if (beat) {
+    if (beatType) {
       if (store.metronomeEnabled && subBeat === 0) {
         playMetronomeClick(beatIdx === 0);
       }
 
-      const cellIdx = getActiveCellIndex(beat, subBeat);
+      const displayCellIdx = getActiveCellIndex(beatType, subBeat);
 
-      if (cellIdx !== null) {
-        setPosition(chordIdx, beatIdx, cellIdx, rep);
+      if (displayCellIdx !== null) {
+        setPosition(chordIdx, beatIdx, displayCellIdx, rep);
 
         if (store.audioEnabled) {
-          const cell = beat.cells[cellIdx];
+          const cell = chord.strumPattern[tickPos];
           if (cell && (cell as string) !== '') {
             const chordData = chordDatabase[chord.name];
             if (chordData?.positions[0]) {

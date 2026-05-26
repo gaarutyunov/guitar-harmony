@@ -5,7 +5,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { useSettingsStore } from '@/stores/useSettingsStore';
 import { useHarmonyStore } from '@/stores/useHarmonyStore';
 import { getProgressionsForMode, getRowsForMode, resolveProgression } from '@/data/curriculum';
-import { getEmptyPattern } from '@/lib/strum/presets';
+import { getEmptyPattern, getDefaultBeatTypes } from '@/lib/strum/presets';
 import { useState } from 'react';
 
 export function CommonProgressions() {
@@ -33,6 +33,7 @@ export function CommonProgressions() {
       key: targetRow.key,
       mode,
       strumPattern: getEmptyPattern(current.timeSignature),
+      beatTypes: getDefaultBeatTypes(current.timeSignature),
     }));
 
     setCurrent({

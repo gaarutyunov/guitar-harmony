@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { useHarmonyStore } from "@/stores/useHarmonyStore";
-import type { Beat } from "@/types";
+import type { StrumCell } from "@/types";
 
 describe("useHarmonyStore", () => {
   beforeEach(() => {
@@ -23,17 +23,20 @@ describe("useHarmonyStore", () => {
     expect(state.current.name).toBe("");
   });
 
-  it("adds a chord with 4 beats for 4/4", () => {
+  it("adds a chord with 16-cell pattern and 4 beatTypes for 4/4", () => {
     const { addChord } = useHarmonyStore.getState();
     addChord({ name: "Am", degree: "vi", key: "C", mode: "major" });
     const state = useHarmonyStore.getState();
     expect(state.current.chords).toHaveLength(1);
     expect(state.current.chords[0].name).toBe("Am");
-    expect(state.current.chords[0].strumPattern).toHaveLength(4);
-    state.current.chords[0].strumPattern.forEach((beat) => {
-      expect(beat.type).toBe("negra");
-      expect(beat.cells).toHaveLength(1);
-    });
+    expect(state.current.chords[0].strumPattern).toHaveLength(16);
+    expect(state.current.chords[0].beatTypes).toHaveLength(4);
+    expect(state.current.chords[0].beatTypes).toEqual([
+      "negra",
+      "negra",
+      "negra",
+      "negra",
+    ]);
   });
 
   it("removes a chord", () => {
@@ -65,17 +68,20 @@ describe("useHarmonyStore", () => {
     expect(useHarmonyStore.getState().current.name).toBe("My Harmony");
   });
 
-  it("changes time signature and resets patterns to 3 beats for 3/4", () => {
+  it("changes time signature and resets to 12 cells / 3 beats for 3/4", () => {
     const { addChord } = useHarmonyStore.getState();
     addChord({ name: "Am", degree: "vi", key: "C", mode: "major" });
     expect(
       useHarmonyStore.getState().current.chords[0].strumPattern,
-    ).toHaveLength(4);
+    ).toHaveLength(16);
 
     useHarmonyStore.getState().setTimeSignature("3/4");
     expect(useHarmonyStore.getState().current.timeSignature).toBe("3/4");
     expect(
       useHarmonyStore.getState().current.chords[0].strumPattern,
+    ).toHaveLength(12);
+    expect(
+      useHarmonyStore.getState().current.chords[0].beatTypes,
     ).toHaveLength(3);
   });
 
@@ -119,19 +125,29 @@ describe("useHarmonyStore", () => {
     expect(useHarmonyStore.getState().saved).toHaveLength(0);
   });
 
-  it("updates strum pattern with Beat[]", () => {
+  it("updates strum pattern", () => {
     const { addChord, updatePattern } = useHarmonyStore.getState();
     addChord({ name: "Am", degree: "vi", key: "C", mode: "major" });
     const chordId = useHarmonyStore.getState().current.chords[0].id;
-    const newPattern: Beat[] = [
-      { type: "corchea", cells: ["↓", ""] },
-      { type: "corchea", cells: ["↓", "↑"] },
-      { type: "corchea", cells: ["", "↑"] },
-      { type: "corchea", cells: ["↓", "↑"] },
+    const newPattern: StrumCell[] = [
+      "↓", "", "", "",
+      "↓", "", "↑", "",
+      "", "", "↑", "",
+      "↓", "", "↑", "",
     ];
     updatePattern(chordId, newPattern);
     expect(
-      useHarmonyStore.getState().current.chords[0].strumPattern[0].cells[0],
+      useHarmonyStore.getState().current.chords[0].strumPattern[0],
     ).toBe("↓");
+  });
+
+  it("updates beat types", () => {
+    const { addChord, updateBeatTypes } = useHarmonyStore.getState();
+    addChord({ name: "Am", degree: "vi", key: "C", mode: "major" });
+    const chordId = useHarmonyStore.getState().current.chords[0].id;
+    updateBeatTypes(chordId, ["corchea", "semicorchea", "negra", "corchea"]);
+    expect(
+      useHarmonyStore.getState().current.chords[0].beatTypes,
+    ).toEqual(["corchea", "semicorchea", "negra", "corchea"]);
   });
 });

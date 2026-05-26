@@ -1,11 +1,6 @@
 export type StrumCell = "" | "↓" | "↑" | "✕";
 export type BeatType = "negra" | "corchea" | "semicorchea";
 
-export interface Beat {
-  type: BeatType;
-  cells: StrumCell[];
-}
-
 export type Inversion = 'root' | '1st' | '2nd' | '3rd';
 export type StringIndex = 0 | 1 | 2 | 3 | 4 | 5;
 
@@ -38,7 +33,8 @@ export interface HarmonyChord {
   degree: string;
   key: string;
   mode: "major" | "minor";
-  strumPattern: Beat[];
+  strumPattern: StrumCell[];
+  beatTypes?: BeatType[];
   voicingId?: string;
   voicingSymbol?: string;
   voicingInversion?: Inversion;
