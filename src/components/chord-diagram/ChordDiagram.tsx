@@ -1,16 +1,19 @@
 'use client';
 
 import { getChordData } from '@/data/chords';
+import { getChordNoteNames } from '@/lib/theory';
 
 interface ChordDiagramProps {
   chordName: string;
   showFingering: boolean;
+  showNotes?: boolean;
   size?: 'sm' | 'md';
 }
 
-export function ChordDiagram({ chordName, showFingering, size = 'md' }: ChordDiagramProps) {
+export function ChordDiagram({ chordName, showFingering, showNotes = false, size = 'md' }: ChordDiagramProps) {
   const data = getChordData(chordName);
   const pos = data?.positions[0];
+  const noteNames = pos ? getChordNoteNames(pos) : [];
 
   const w = size === 'sm' ? 80 : 120;
   const h = size === 'sm' ? 100 : 150;
@@ -134,6 +137,29 @@ export function ChordDiagram({ chordName, showFingering, size = 'md' }: ChordDia
         }
 
         if (fret === 0) {
+          if (showNotes && noteNames[stringIdx]) {
+            return (
+              <g key={`marker-${stringIdx}`}>
+                <circle
+                  cx={x}
+                  cy={padding.top - 10}
+                  r={dotRadius}
+                  fill="#f59e0b"
+                />
+                <text
+                  x={x}
+                  y={padding.top - 10 + (fontSize / 3)}
+                  fill="#1a0d04"
+                  fontSize={fontSize - 1}
+                  fontFamily="JetBrains Mono"
+                  fontWeight="bold"
+                  textAnchor="middle"
+                >
+                  {noteNames[stringIdx]}
+                </text>
+              </g>
+            );
+          }
           return (
             <circle
               key={`marker-${stringIdx}`}
@@ -155,17 +181,17 @@ export function ChordDiagram({ chordName, showFingering, size = 'md' }: ChordDia
             {!isBarre && (
               <circle cx={x} cy={y} r={dotRadius} fill="#f59e0b" />
             )}
-            {pos.fingers[stringIdx] > 0 && (
+            {(showNotes ? noteNames[stringIdx] : pos.fingers[stringIdx] > 0) && (
               <text
                 x={x}
                 y={y + (fontSize / 3)}
-                fill={isBarre ? '#1a0d04' : '#1a0d04'}
-                fontSize={fontSize}
+                fill="#1a0d04"
+                fontSize={showNotes ? fontSize - 1 : fontSize}
                 fontFamily="JetBrains Mono"
                 fontWeight="bold"
                 textAnchor="middle"
               >
-                {pos.fingers[stringIdx]}
+                {showNotes ? noteNames[stringIdx] : pos.fingers[stringIdx]}
               </text>
             )}
           </g>

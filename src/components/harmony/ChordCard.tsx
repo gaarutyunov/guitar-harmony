@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { HarmonyChord, TimeSignature, StrumCell } from '@/types';
 import { useSettingsStore } from '@/stores/useSettingsStore';
 import { ChordDiagram } from '@/components/chord-diagram/ChordDiagram';
@@ -30,6 +31,7 @@ export function ChordCard({
   activeBeat = -1,
 }: ChordCardProps) {
   const showFingering = useSettingsStore((s) => s.showFingering);
+  const [showNotes, setShowNotes] = useState(false);
   const quality = getChordQuality(chord.name);
 
   return (
@@ -72,7 +74,13 @@ export function ChordCard({
 
       {/* Body */}
       <div className="flex gap-3 p-3">
-        <ChordDiagram chordName={chord.name} showFingering={showFingering} size="md" />
+        <button
+          onClick={() => setShowNotes((v) => !v)}
+          className="cursor-pointer rounded-lg transition-colors hover:bg-mahogany-800/30"
+          aria-label={showNotes ? 'Show fingering' : 'Show notes'}
+        >
+          <ChordDiagram chordName={chord.name} showFingering={showFingering} showNotes={showNotes} size="md" />
+        </button>
         <div className="flex-1 min-w-0">
           <StrumGrid
             pattern={chord.strumPattern}

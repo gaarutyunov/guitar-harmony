@@ -1,4 +1,15 @@
-import { ChordQuality } from '@/types';
+import { ChordPosition, ChordQuality } from '@/types';
+
+const NOTE_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+const OPEN_STRINGS_MIDI = [40, 45, 50, 55, 59, 64]; // E2 A2 D3 G3 B3 E4
+
+export function getChordNoteNames(position: ChordPosition): (string | null)[] {
+  return position.frets.map((fret, i) => {
+    if (fret < 0) return null;
+    const actualFret = fret === 0 ? 0 : position.baseFret - 1 + fret;
+    return NOTE_NAMES[(OPEN_STRINGS_MIDI[i] + actualFret) % 12];
+  });
+}
 
 export function getChordQuality(chordName: string): ChordQuality {
   if (chordName.includes('dim')) return 'diminished';
