@@ -153,7 +153,7 @@ export function HarmonyBuilder() {
                 onMove={(dir) => moveChord(chord.id, dir)}
                 onRemove={() => removeChord(chord.id)}
                 onUpdatePattern={(pattern) => updatePattern(chord.id, pattern)}
-                onUpdateVoicing={(v) => updateVoicing(chord.id, v.id, v.symbol, v.inversion, v.hasBarre)}
+                onUpdateVoicing={(v) => updateVoicing(chord.id, v.id, v.symbol, v.inversion, v.hasBarre, v.position)}
                 isActive={isPlaying && currentChordIndex === idx}
                 activeBeat={
                   isPlaying && currentChordIndex === idx ? currentBeat : -1

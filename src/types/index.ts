@@ -37,6 +37,7 @@ export interface HarmonyChord {
   voicingSymbol?: string;
   voicingInversion?: Inversion;
   voicingHasBarre?: boolean;
+  voicingPosition?: ChordPosition;
 }
 
 export interface Harmony {

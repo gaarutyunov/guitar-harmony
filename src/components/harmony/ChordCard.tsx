@@ -112,7 +112,7 @@ export function ChordCard({
             className="cursor-pointer rounded-lg transition-colors hover:bg-mahogany-800/30"
             aria-label={showNotes ? 'Show fingering' : 'Show notes'}
           >
-            <ChordDiagram chordName={chord.name} showFingering={showFingering} showNotes={showNotes} size="md" />
+            <ChordDiagram chordName={chord.name} position={chord.voicingPosition} showFingering={showFingering} showNotes={showNotes} size="md" />
           </button>
           <div className="flex-1 min-w-0">
             <StrumGrid

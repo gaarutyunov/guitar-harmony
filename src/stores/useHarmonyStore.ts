@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { v4 as uuidv4 } from "uuid";
-import { Harmony, HarmonyChord, Inversion, StrumCell, TimeSignature } from "@/types";
+import { ChordPosition, Harmony, HarmonyChord, Inversion, StrumCell, TimeSignature } from "@/types";
 import { getEmptyPattern } from "@/lib/strum/presets";
 import { usePlaybackStore } from "@/stores/usePlaybackStore";
 
@@ -25,7 +25,7 @@ interface HarmonyState {
   removeChord: (id: string) => void;
   moveChord: (id: string, dir: -1 | 1) => void;
   updatePattern: (id: string, pattern: StrumCell[]) => void;
-  updateVoicing: (id: string, voicingId: string, voicingSymbol: string, voicingInversion: Inversion, voicingHasBarre: boolean) => void;
+  updateVoicing: (id: string, voicingId: string, voicingSymbol: string, voicingInversion: Inversion, voicingHasBarre: boolean, voicingPosition: ChordPosition) => void;
   setName: (name: string) => void;
   setBpm: (bpm: number) => void;
   setTimeSignature: (ts: TimeSignature) => void;
@@ -86,13 +86,13 @@ export const useHarmonyStore = create<HarmonyState>()(
           },
         })),
 
-      updateVoicing: (id, voicingId, voicingSymbol, voicingInversion, voicingHasBarre) =>
+      updateVoicing: (id, voicingId, voicingSymbol, voicingInversion, voicingHasBarre, voicingPosition) =>
         set((state) => ({
           current: {
             ...state.current,
             chords: state.current.chords.map((c) =>
               c.id === id
-                ? { ...c, voicingId, voicingSymbol, voicingInversion, voicingHasBarre }
+                ? { ...c, voicingId, voicingSymbol, voicingInversion, voicingHasBarre, voicingPosition }
                 : c,
             ),
           },
