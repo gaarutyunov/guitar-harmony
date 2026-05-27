@@ -5,7 +5,7 @@ import { useTranslations } from 'next-intl';
 import { usePlaybackStore } from '@/stores/usePlaybackStore';
 import { useHarmonyStore } from '@/stores/useHarmonyStore';
 import { chordDatabase } from '@/data/chords';
-import { getActiveCellIndex, getDefaultBeatTypes } from '@/lib/strum/presets';
+import { getActiveCellIndex, deriveBeatType } from '@/lib/strum/presets';
 import {
   ensureAudioReady,
   getChordFrequencies,
@@ -58,13 +58,12 @@ export function PlaybackControls() {
     }
 
     const chord = harmony.chords[chordIdx];
-    const beatTypes = chord.beatTypes || getDefaultBeatTypes(harmony.timeSignature);
-    const numBeats = beatTypes.length;
+    const numBeats = harmony.timeSignature === '4/4' ? 4 : 3;
     const totalTicks = numBeats * 4;
 
     const beatIdx = Math.floor(tickPos / 4);
     const subBeat = tickPos % 4;
-    const beatType = beatTypes[beatIdx];
+    const beatType = deriveBeatType(chord.strumPattern, beatIdx);
 
     if (beatType) {
       if (store.metronomeEnabled && subBeat === 0) {

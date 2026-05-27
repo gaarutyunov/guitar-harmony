@@ -2,14 +2,11 @@ import { describe, it, expect } from 'vitest';
 import {
   getPresetsForTimeSignature,
   getEmptyPattern,
-  getDefaultBeatTypes,
   cycleStrumCell,
-  cycleBeatType,
-  cellCountForType,
-  cellToOffset,
-  getDisplayCells,
+  deriveBeatType,
+  getBeatSymbols,
+  cycleBeat,
   getActiveCellIndex,
-  cleanPatternForBeatType,
 } from '@/lib/strum/presets';
 import type { StrumCell } from '@/types';
 
@@ -19,7 +16,6 @@ describe('getPresetsForTimeSignature', () => {
     expect(presets.length).toBeGreaterThan(0);
     presets.forEach((p) => {
       expect(p.pattern).toHaveLength(16);
-      expect(p.beatTypes).toHaveLength(4);
       expect(p.timeSignature).toBe('4/4');
     });
   });
@@ -29,7 +25,6 @@ describe('getPresetsForTimeSignature', () => {
     expect(presets.length).toBeGreaterThan(0);
     presets.forEach((p) => {
       expect(p.pattern).toHaveLength(12);
-      expect(p.beatTypes).toHaveLength(3);
       expect(p.timeSignature).toBe('3/4');
     });
   });
@@ -49,18 +44,6 @@ describe('getEmptyPattern', () => {
   });
 });
 
-describe('getDefaultBeatTypes', () => {
-  it('returns 4 negra types for 4/4', () => {
-    const bt = getDefaultBeatTypes('4/4');
-    expect(bt).toEqual(['negra', 'negra', 'negra', 'negra']);
-  });
-
-  it('returns 3 negra types for 3/4', () => {
-    const bt = getDefaultBeatTypes('3/4');
-    expect(bt).toEqual(['negra', 'negra', 'negra']);
-  });
-});
-
 describe('cycleStrumCell', () => {
   it('cycles through all states', () => {
     expect(cycleStrumCell('')).toBe('↓');
@@ -70,73 +53,94 @@ describe('cycleStrumCell', () => {
   });
 });
 
-describe('cycleBeatType', () => {
-  it('cycles negra → corchea → semicorchea → negra', () => {
-    expect(cycleBeatType('negra')).toBe('corchea');
-    expect(cycleBeatType('corchea')).toBe('semicorchea');
-    expect(cycleBeatType('semicorchea')).toBe('negra');
+describe('deriveBeatType', () => {
+  it('returns negra when only first cell has content', () => {
+    const p: StrumCell[] = ['↓', '', '', '', '', '', '', '', '', '', '', '', '', '', '', ''];
+    expect(deriveBeatType(p, 0)).toBe('negra');
+  });
+
+  it('returns corchea when position 2 has content', () => {
+    const p: StrumCell[] = ['↓', '', '↑', '', '', '', '', '', '', '', '', '', '', '', '', ''];
+    expect(deriveBeatType(p, 0)).toBe('corchea');
+  });
+
+  it('returns semicorchea when odd positions have content', () => {
+    const p: StrumCell[] = ['↓', '↑', '↓', '↑', '', '', '', '', '', '', '', '', '', '', '', ''];
+    expect(deriveBeatType(p, 0)).toBe('semicorchea');
+  });
+
+  it('reads correct beat index', () => {
+    const p: StrumCell[] = ['', '', '', '', '↓', '↑', '↓', '↑', '', '', '', '', '', '', '', ''];
+    expect(deriveBeatType(p, 0)).toBe('negra');
+    expect(deriveBeatType(p, 1)).toBe('semicorchea');
   });
 });
 
-describe('cellCountForType', () => {
-  it('returns correct counts', () => {
-    expect(cellCountForType('negra')).toBe(1);
-    expect(cellCountForType('corchea')).toBe(2);
-    expect(cellCountForType('semicorchea')).toBe(4);
+describe('getBeatSymbols', () => {
+  it('returns 1 symbol for negra', () => {
+    const p: StrumCell[] = ['↓', '', '', '', '', '', '', '', '', '', '', '', '', '', '', ''];
+    expect(getBeatSymbols(p, 0)).toEqual(['↓']);
+  });
+
+  it('returns 2 symbols for corchea', () => {
+    const p: StrumCell[] = ['↓', '', '↑', '', '', '', '', '', '', '', '', '', '', '', '', ''];
+    expect(getBeatSymbols(p, 0)).toEqual(['↓', '↑']);
+  });
+
+  it('returns 4 symbols for semicorchea', () => {
+    const p: StrumCell[] = ['↓', '↑', '↓', '↑', '', '', '', '', '', '', '', '', '', '', '', ''];
+    expect(getBeatSymbols(p, 0)).toEqual(['↓', '↑', '↓', '↑']);
   });
 });
 
-describe('cellToOffset', () => {
-  it('returns 0 for negra', () => {
-    expect(cellToOffset('negra', 0)).toBe(0);
+describe('cycleBeat', () => {
+  const empty16: StrumCell[] = new Array(16).fill('');
+
+  it('cycles empty to ↓', () => {
+    const result = cycleBeat(empty16, 0);
+    expect(result.slice(0, 4)).toEqual(['↓', '', '', '']);
   });
 
-  it('maps corchea display cells to offsets 0 and 2', () => {
-    expect(cellToOffset('corchea', 0)).toBe(0);
-    expect(cellToOffset('corchea', 1)).toBe(2);
+  it('cycles ↓ to ↑', () => {
+    const p = [...empty16] as StrumCell[];
+    p[0] = '↓';
+    const result = cycleBeat(p, 0);
+    expect(result.slice(0, 4)).toEqual(['↑', '', '', '']);
   });
 
-  it('maps semicorchea display cells directly', () => {
-    expect(cellToOffset('semicorchea', 0)).toBe(0);
-    expect(cellToOffset('semicorchea', 1)).toBe(1);
-    expect(cellToOffset('semicorchea', 2)).toBe(2);
-    expect(cellToOffset('semicorchea', 3)).toBe(3);
-  });
-});
-
-describe('getDisplayCells', () => {
-  const pattern: StrumCell[] = ['↓', '↑', '↓', '↑', '', '', '', '', '', '', '', '', '', '', '', ''];
-
-  it('returns 1 cell for negra', () => {
-    const cells = getDisplayCells(pattern, 0, 'negra');
-    expect(cells).toEqual([{ cell: '↓', flatIdx: 0 }]);
+  it('cycles ↑ to ✕', () => {
+    const p = [...empty16] as StrumCell[];
+    p[0] = '↑';
+    const result = cycleBeat(p, 0);
+    expect(result.slice(0, 4)).toEqual(['✕', '', '', '']);
   });
 
-  it('returns 2 cells for corchea', () => {
-    const cells = getDisplayCells(pattern, 0, 'corchea');
-    expect(cells).toEqual([
-      { cell: '↓', flatIdx: 0 },
-      { cell: '↓', flatIdx: 2 },
-    ]);
+  it('cycles ✕ to ↓↑ (corchea)', () => {
+    const p = [...empty16] as StrumCell[];
+    p[0] = '✕';
+    const result = cycleBeat(p, 0);
+    expect(result.slice(0, 4)).toEqual(['↓', '', '↑', '']);
   });
 
-  it('returns 4 cells for semicorchea', () => {
-    const cells = getDisplayCells(pattern, 0, 'semicorchea');
-    expect(cells).toEqual([
-      { cell: '↓', flatIdx: 0 },
-      { cell: '↑', flatIdx: 1 },
-      { cell: '↓', flatIdx: 2 },
-      { cell: '↑', flatIdx: 3 },
-    ]);
+  it('cycles ↓↑ to ↓↑↓↑ (semicorchea)', () => {
+    const p = [...empty16] as StrumCell[];
+    p[0] = '↓'; p[2] = '↑';
+    const result = cycleBeat(p, 0);
+    expect(result.slice(0, 4)).toEqual(['↓', '↑', '↓', '↑']);
   });
 
-  it('reads correct offsets for beat 1', () => {
-    const p: StrumCell[] = ['', '', '', '', '✕', '', '↓', '', '', '', '', '', '', '', '', ''];
-    const cells = getDisplayCells(p, 1, 'corchea');
-    expect(cells).toEqual([
-      { cell: '✕', flatIdx: 4 },
-      { cell: '↓', flatIdx: 6 },
-    ]);
+  it('cycles ↓↑↓↑ to empty', () => {
+    const p = [...empty16] as StrumCell[];
+    p[0] = '↓'; p[1] = '↑'; p[2] = '↓'; p[3] = '↑';
+    const result = cycleBeat(p, 0);
+    expect(result.slice(0, 4)).toEqual(['', '', '', '']);
+  });
+
+  it('does not affect other beats', () => {
+    const p = [...empty16] as StrumCell[];
+    p[4] = '✕';
+    const result = cycleBeat(p, 0);
+    expect(result[4]).toBe('✕');
   });
 });
 
@@ -144,8 +148,6 @@ describe('getActiveCellIndex', () => {
   it('returns 0 for negra on subBeat 0', () => {
     expect(getActiveCellIndex('negra', 0)).toBe(0);
     expect(getActiveCellIndex('negra', 1)).toBeNull();
-    expect(getActiveCellIndex('negra', 2)).toBeNull();
-    expect(getActiveCellIndex('negra', 3)).toBeNull();
   });
 
   it('returns correct indices for corchea', () => {
@@ -160,31 +162,5 @@ describe('getActiveCellIndex', () => {
     expect(getActiveCellIndex('semicorchea', 1)).toBe(1);
     expect(getActiveCellIndex('semicorchea', 2)).toBe(2);
     expect(getActiveCellIndex('semicorchea', 3)).toBe(3);
-  });
-});
-
-describe('cleanPatternForBeatType', () => {
-  it('clears cells 1-3 for negra', () => {
-    const pattern: StrumCell[] = ['↓', '↑', '↓', '↑', '', '', '', '', '', '', '', '', '', '', '', ''];
-    const cleaned = cleanPatternForBeatType(pattern, 0, 'negra');
-    expect(cleaned.slice(0, 4)).toEqual(['↓', '', '', '']);
-  });
-
-  it('clears cells 1 and 3 for corchea', () => {
-    const pattern: StrumCell[] = ['↓', '↑', '↓', '↑', '', '', '', '', '', '', '', '', '', '', '', ''];
-    const cleaned = cleanPatternForBeatType(pattern, 0, 'corchea');
-    expect(cleaned.slice(0, 4)).toEqual(['↓', '', '↓', '']);
-  });
-
-  it('leaves all cells for semicorchea', () => {
-    const pattern: StrumCell[] = ['↓', '↑', '↓', '↑', '', '', '', '', '', '', '', '', '', '', '', ''];
-    const cleaned = cleanPatternForBeatType(pattern, 0, 'semicorchea');
-    expect(cleaned.slice(0, 4)).toEqual(['↓', '↑', '↓', '↑']);
-  });
-
-  it('only affects the target beat', () => {
-    const pattern: StrumCell[] = ['↓', '↑', '↓', '↑', '✕', '↓', '↑', '✕', '', '', '', '', '', '', '', ''];
-    const cleaned = cleanPatternForBeatType(pattern, 0, 'negra');
-    expect(cleaned.slice(4, 8)).toEqual(['✕', '↓', '↑', '✕']);
   });
 });

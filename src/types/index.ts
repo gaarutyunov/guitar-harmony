@@ -34,7 +34,6 @@ export interface HarmonyChord {
   key: string;
   mode: "major" | "minor";
   strumPattern: StrumCell[];
-  beatTypes?: BeatType[];
   voicingId?: string;
   voicingSymbol?: string;
   voicingInversion?: Inversion;

@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import { useTranslations } from 'next-intl';
-import { HarmonyChord, GuitarVoicing, TimeSignature, StrumCell, BeatType } from '@/types';
+import { HarmonyChord, GuitarVoicing, TimeSignature, StrumCell } from '@/types';
 import { useSettingsStore } from '@/stores/useSettingsStore';
 import { ChordDiagram } from '@/components/chord-diagram/ChordDiagram';
 import { StrumGrid } from './StrumGrid';
@@ -10,7 +10,6 @@ import { AlternativesSheet } from './AlternativesSheet';
 import { getChordQuality, getQualityColor } from '@/lib/theory';
 import { detectBarre } from '@/lib/theory/voicings';
 import { getChordData } from '@/data/chords';
-import { getDefaultBeatTypes } from '@/lib/strum/presets';
 
 interface ChordCardProps {
   chord: HarmonyChord;
@@ -20,7 +19,6 @@ interface ChordCardProps {
   onMove: (dir: -1 | 1) => void;
   onRemove: () => void;
   onUpdatePattern: (pattern: StrumCell[]) => void;
-  onUpdateBeatTypes: (beatTypes: BeatType[]) => void;
   onUpdateVoicing: (voicing: GuitarVoicing) => void;
   isActive?: boolean;
   activeBeat?: number;
@@ -35,7 +33,6 @@ export function ChordCard({
   onMove,
   onRemove,
   onUpdatePattern,
-  onUpdateBeatTypes,
   onUpdateVoicing,
   isActive = false,
   activeBeat = -1,
@@ -55,7 +52,6 @@ export function ChordCard({
   }, [chord.name, chord.voicingHasBarre]);
 
   const displayName = chord.voicingSymbol || chord.name;
-  const beatTypes = chord.beatTypes || getDefaultBeatTypes(timeSignature);
 
   return (
     <>
@@ -123,10 +119,8 @@ export function ChordCard({
           <div className="flex-1 min-w-0">
             <StrumGrid
               pattern={chord.strumPattern}
-              beatTypes={beatTypes}
               timeSignature={timeSignature}
               onChange={onUpdatePattern}
-              onBeatTypesChange={onUpdateBeatTypes}
               activeBeat={isActive ? activeBeat : -1}
               activeCell={isActive ? activeCell : -1}
             />

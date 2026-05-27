@@ -1,8 +1,8 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { v4 as uuidv4 } from "uuid";
-import { ChordPosition, Harmony, HarmonyChord, Inversion, StrumCell, BeatType, TimeSignature } from "@/types";
-import { getEmptyPattern, getDefaultBeatTypes } from "@/lib/strum/presets";
+import { ChordPosition, Harmony, HarmonyChord, Inversion, StrumCell, TimeSignature } from "@/types";
+import { getEmptyPattern } from "@/lib/strum/presets";
 import { usePlaybackStore } from "@/stores/usePlaybackStore";
 
 const DEFAULT_BPM = 80;
@@ -22,16 +22,14 @@ function migrateChordPattern(chord: Record<string, unknown>): Record<string, unk
   const pattern = chord.strumPattern;
   if (!pattern || !Array.isArray(pattern)) return chord;
 
-  if (typeof pattern[0] === "string" && (pattern.length === 16 || pattern.length === 12) && chord.beatTypes) {
+  if (typeof pattern[0] === "string" && (pattern.length === 16 || pattern.length === 12)) {
     return chord;
   }
 
   if (typeof pattern[0] === "object" && pattern[0] !== null) {
     const beats = pattern as { type: string; cells: string[] }[];
     const flat: string[] = [];
-    const types: string[] = [];
     for (const beat of beats) {
-      types.push(beat.type);
       if (beat.type === "corchea") {
         flat.push(beat.cells[0] || "", "", beat.cells[1] || "", "");
       } else if (beat.type === "semicorchea") {
@@ -40,7 +38,7 @@ function migrateChordPattern(chord: Record<string, unknown>): Record<string, unk
         flat.push(beat.cells[0] || "", "", "", "");
       }
     }
-    return { ...chord, strumPattern: flat, beatTypes: types };
+    return { ...chord, strumPattern: flat };
   }
 
   if (typeof pattern[0] === "string" && (pattern.length === 8 || pattern.length === 6)) {
@@ -48,8 +46,7 @@ function migrateChordPattern(chord: Record<string, unknown>): Record<string, unk
     for (let i = 0; i < pattern.length; i += 2) {
       expanded.push(pattern[i] || "", "", pattern[i + 1] || "", "");
     }
-    const numBeats = pattern.length === 8 ? 4 : 3;
-    return { ...chord, strumPattern: expanded, beatTypes: new Array(numBeats).fill("corchea") };
+    return { ...chord, strumPattern: expanded };
   }
 
   return chord;
@@ -58,11 +55,10 @@ function migrateChordPattern(chord: Record<string, unknown>): Record<string, unk
 interface HarmonyState {
   current: Harmony;
   saved: Harmony[];
-  addChord: (chord: Omit<HarmonyChord, "id" | "strumPattern" | "beatTypes">) => void;
+  addChord: (chord: Omit<HarmonyChord, "id" | "strumPattern">) => void;
   removeChord: (id: string) => void;
   moveChord: (id: string, dir: -1 | 1) => void;
   updatePattern: (id: string, pattern: StrumCell[]) => void;
-  updateBeatTypes: (id: string, beatTypes: BeatType[]) => void;
   updateVoicing: (id: string, voicingId: string, voicingSymbol: string, voicingInversion: Inversion, voicingHasBarre: boolean, voicingPosition: ChordPosition) => void;
   setName: (name: string) => void;
   setBpm: (bpm: number) => void;
@@ -90,7 +86,6 @@ export const useHarmonyStore = create<HarmonyState>()(
                 ...chord,
                 id: uuidv4(),
                 strumPattern: getEmptyPattern(state.current.timeSignature),
-                beatTypes: getDefaultBeatTypes(state.current.timeSignature),
               },
             ],
           },
@@ -125,16 +120,6 @@ export const useHarmonyStore = create<HarmonyState>()(
           },
         })),
 
-      updateBeatTypes: (id, beatTypes) =>
-        set((state) => ({
-          current: {
-            ...state.current,
-            chords: state.current.chords.map((c) =>
-              c.id === id ? { ...c, beatTypes } : c,
-            ),
-          },
-        })),
-
       updateVoicing: (id, voicingId, voicingSymbol, voicingInversion, voicingHasBarre, voicingPosition) =>
         set((state) => ({
           current: {
@@ -163,7 +148,6 @@ export const useHarmonyStore = create<HarmonyState>()(
             chords: state.current.chords.map((c) => ({
               ...c,
               strumPattern: getEmptyPattern(ts),
-              beatTypes: getDefaultBeatTypes(ts),
             })),
           },
         })),
