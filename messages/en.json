@@ -36,6 +36,7 @@
   "strum_presets": {
     "quarter_notes": "Quarter notes",
     "eighth_notes": "Eighth notes",
+    "sixteenth_notes": "Sixteenth notes",
     "pop_basic": "Basic pop",
     "chuck_down": "Chuck ↓",
     "rasgueado": "Rasgueado",

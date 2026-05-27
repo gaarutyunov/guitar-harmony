@@ -26,6 +26,7 @@ export function HarmonyBuilder() {
   const setSearchMode = useSongsStore((s) => s.setSearchMode);
   const currentChordIndex = usePlaybackStore((s) => s.currentChordIndex);
   const currentBeat = usePlaybackStore((s) => s.currentBeat);
+  const currentCell = usePlaybackStore((s) => s.currentCell);
   const isPlaying = usePlaybackStore((s) => s.isPlaying);
   const [toast, setToast] = useState<string | null>(null);
   const chordRefs = useRef<Map<string, HTMLDivElement>>(new Map());
@@ -157,6 +158,9 @@ export function HarmonyBuilder() {
                 isActive={isPlaying && currentChordIndex === idx}
                 activeBeat={
                   isPlaying && currentChordIndex === idx ? currentBeat : -1
+                }
+                activeCell={
+                  isPlaying && currentChordIndex === idx ? currentCell : -1
                 }
               />
             </div>

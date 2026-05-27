@@ -22,6 +22,7 @@ interface ChordCardProps {
   onUpdateVoicing: (voicing: GuitarVoicing) => void;
   isActive?: boolean;
   activeBeat?: number;
+  activeCell?: number;
 }
 
 export function ChordCard({
@@ -35,6 +36,7 @@ export function ChordCard({
   onUpdateVoicing,
   isActive = false,
   activeBeat = -1,
+  activeCell = -1,
 }: ChordCardProps) {
   const showFingering = useSettingsStore((s) => s.showFingering);
   const [showNotes, setShowNotes] = useState(false);
@@ -120,6 +122,7 @@ export function ChordCard({
               timeSignature={timeSignature}
               onChange={onUpdatePattern}
               activeBeat={isActive ? activeBeat : -1}
+              activeCell={isActive ? activeCell : -1}
             />
           </div>
         </div>

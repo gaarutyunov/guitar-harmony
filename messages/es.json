@@ -36,6 +36,7 @@
   "strum_presets": {
     "quarter_notes": "Negras",
     "eighth_notes": "Corcheas",
+    "sixteenth_notes": "Semicorcheas",
     "pop_basic": "Pop básico",
     "chuck_down": "Chuck ↓",
     "rasgueado": "Rasgueo",

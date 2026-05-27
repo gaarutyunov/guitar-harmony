@@ -1,4 +1,5 @@
 export type StrumCell = "" | "↓" | "↑" | "✕";
+export type BeatType = "negra" | "corchea" | "semicorchea";
 
 export type Inversion = 'root' | '1st' | '2nd' | '3rd';
 export type StringIndex = 0 | 1 | 2 | 3 | 4 | 5;

@@ -5,7 +5,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { useSettingsStore } from '@/stores/useSettingsStore';
 import { useHarmonyStore } from '@/stores/useHarmonyStore';
 import { getProgressionsForMode, getRowsForMode, resolveProgression } from '@/data/curriculum';
-import { StrumCell } from '@/types';
+import { getEmptyPattern } from '@/lib/strum/presets';
 import { useState } from 'react';
 
 export function CommonProgressions() {
@@ -32,7 +32,7 @@ export function CommonProgressions() {
       degree: c.degree,
       key: targetRow.key,
       mode,
-      strumPattern: new Array(current.timeSignature === '4/4' ? 8 : 6).fill('') as StrumCell[],
+      strumPattern: getEmptyPattern(current.timeSignature),
     }));
 
     setCurrent({

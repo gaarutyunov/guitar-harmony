@@ -18,6 +18,40 @@ function createEmptyHarmony(): Harmony {
   };
 }
 
+function migrateChordPattern(chord: Record<string, unknown>): Record<string, unknown> {
+  const pattern = chord.strumPattern;
+  if (!pattern || !Array.isArray(pattern)) return chord;
+
+  if (typeof pattern[0] === "string" && (pattern.length === 16 || pattern.length === 12)) {
+    return chord;
+  }
+
+  if (typeof pattern[0] === "object" && pattern[0] !== null) {
+    const beats = pattern as { type: string; cells: string[] }[];
+    const flat: string[] = [];
+    for (const beat of beats) {
+      if (beat.type === "corchea") {
+        flat.push(beat.cells[0] || "", "", beat.cells[1] || "", "");
+      } else if (beat.type === "semicorchea") {
+        flat.push(beat.cells[0] || "", beat.cells[1] || "", beat.cells[2] || "", beat.cells[3] || "");
+      } else {
+        flat.push(beat.cells[0] || "", "", "", "");
+      }
+    }
+    return { ...chord, strumPattern: flat };
+  }
+
+  if (typeof pattern[0] === "string" && (pattern.length === 8 || pattern.length === 6)) {
+    const expanded: string[] = [];
+    for (let i = 0; i < pattern.length; i += 2) {
+      expanded.push(pattern[i] || "", "", pattern[i + 1] || "", "");
+    }
+    return { ...chord, strumPattern: expanded };
+  }
+
+  return chord;
+}
+
 interface HarmonyState {
   current: Harmony;
   saved: Harmony[];
@@ -152,6 +186,26 @@ export const useHarmonyStore = create<HarmonyState>()(
 
       setCurrent: (harmony) => set({ current: harmony }),
     }),
-    { name: "guitar-harmony-data" },
+    {
+      name: "guitar-harmony-data",
+      version: 2,
+      migrate: (persisted: unknown, version: number) => {
+        const state = persisted as Record<string, unknown>;
+        if (version < 2) {
+          const current = state.current as Record<string, unknown> | undefined;
+          if (current?.chords && Array.isArray(current.chords)) {
+            current.chords = current.chords.map(migrateChordPattern);
+          }
+          const saved = state.saved as Array<Record<string, unknown>> | undefined;
+          if (saved) {
+            state.saved = saved.map((h) => ({
+              ...h,
+              chords: Array.isArray(h.chords) ? h.chords.map(migrateChordPattern) : [],
+            }));
+          }
+        }
+        return state;
+      },
+    },
   ),
 );

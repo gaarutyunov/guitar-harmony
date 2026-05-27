@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { useHarmonyStore } from "@/stores/useHarmonyStore";
+import type { StrumCell } from "@/types";
 
 describe("useHarmonyStore", () => {
   beforeEach(() => {
@@ -22,13 +23,13 @@ describe("useHarmonyStore", () => {
     expect(state.current.name).toBe("");
   });
 
-  it("adds a chord", () => {
+  it("adds a chord with 16-cell pattern for 4/4", () => {
     const { addChord } = useHarmonyStore.getState();
     addChord({ name: "Am", degree: "vi", key: "C", mode: "major" });
     const state = useHarmonyStore.getState();
     expect(state.current.chords).toHaveLength(1);
     expect(state.current.chords[0].name).toBe("Am");
-    expect(state.current.chords[0].strumPattern).toHaveLength(8);
+    expect(state.current.chords[0].strumPattern).toHaveLength(16);
   });
 
   it("removes a chord", () => {
@@ -60,18 +61,18 @@ describe("useHarmonyStore", () => {
     expect(useHarmonyStore.getState().current.name).toBe("My Harmony");
   });
 
-  it("changes time signature and resizes patterns", () => {
+  it("changes time signature and resets to 12 cells for 3/4", () => {
     const { addChord } = useHarmonyStore.getState();
     addChord({ name: "Am", degree: "vi", key: "C", mode: "major" });
     expect(
       useHarmonyStore.getState().current.chords[0].strumPattern,
-    ).toHaveLength(8);
+    ).toHaveLength(16);
 
     useHarmonyStore.getState().setTimeSignature("3/4");
     expect(useHarmonyStore.getState().current.timeSignature).toBe("3/4");
     expect(
       useHarmonyStore.getState().current.chords[0].strumPattern,
-    ).toHaveLength(6);
+    ).toHaveLength(12);
   });
 
   it("saves and loads a harmony", () => {
@@ -118,9 +119,15 @@ describe("useHarmonyStore", () => {
     const { addChord, updatePattern } = useHarmonyStore.getState();
     addChord({ name: "Am", degree: "vi", key: "C", mode: "major" });
     const chordId = useHarmonyStore.getState().current.chords[0].id;
-    updatePattern(chordId, ["↓", "", "↓", "↑", "", "↑", "↓", "↑"]);
-    expect(useHarmonyStore.getState().current.chords[0].strumPattern[0]).toBe(
-      "↓",
-    );
+    const newPattern: StrumCell[] = [
+      "↓", "", "", "",
+      "↓", "", "↑", "",
+      "", "", "↑", "",
+      "↓", "", "↑", "",
+    ];
+    updatePattern(chordId, newPattern);
+    expect(
+      useHarmonyStore.getState().current.chords[0].strumPattern[0],
+    ).toBe("↓");
   });
 });
