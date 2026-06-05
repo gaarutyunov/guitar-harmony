@@ -1,9 +1,39 @@
 {
   "tabs": {
     "table": "Tabla",
+    "explore": "Explorar",
     "harmony": "Armonía",
     "saved": "Guardadas",
     "songs": "Canciones"
+  },
+  "explorer": {
+    "quality": {
+      "major": "Mayor",
+      "minor": "menor",
+      "seventh": "7ª"
+    },
+    "ruler": {
+      "title": "Regla de la séptima",
+      "triad": "Tríada — 3 notas (1 · 3 · 5).",
+      "seventh_intro": "Cuatro notas.",
+      "rule_maj7": "La séptima mayor está a un semitono (½) de la octava.",
+      "rule_flat7": "La ♭7 está a un tono de la octava — la menor baja un tono, la mayor un semitono.",
+      "rule_dim7": "La °7 está a un tono y medio de la octava."
+    },
+    "family": {
+      "title": "Familia",
+      "use_open": "forma abierta",
+      "slide_hint": "Desliza la forma por el mástil",
+      "not_movable": "Acorde abierto — esta forma no se desplaza por el mástil.",
+      "forma": {
+        "min_E": "menor · forma Mi",
+        "min_A": "menor · forma La",
+        "maj_E": "Mayor · forma Mi",
+        "maj_A": "Mayor · forma La",
+        "maj7_A": "maj7 · forma La",
+        "m7_A": "m7 · forma La"
+      }
+    }
   },
   "table": {
     "mode_major": "Mayor",

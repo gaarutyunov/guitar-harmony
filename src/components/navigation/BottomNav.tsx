@@ -6,6 +6,7 @@ import { useHarmonyStore } from "@/stores/useHarmonyStore";
 
 const tabs = [
   { key: "table", path: "/table", icon: "⊞" },
+  { key: "explore", path: "/explore", icon: "✺" },
   { key: "harmony", path: "/harmony", icon: "𝄞" },
   { key: "saved", path: "/saved", icon: "◫" },
   { key: "songs", path: "/songs", icon: "♫" },
