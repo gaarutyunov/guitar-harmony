@@ -7,6 +7,12 @@
     "songs": "Songs"
   },
   "explorer": {
+    "board": {
+      "tap_for_notes": "Tap the chord to see its notes",
+      "showing_notes": "Showing notes · tap for fingering",
+      "show_notes": "Show notes",
+      "show_fingering": "Show fingering"
+    },
     "quality": {
       "major": "Major",
       "minor": "minor",

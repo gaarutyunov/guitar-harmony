@@ -34,6 +34,15 @@ describe('ChordExplorer', () => {
     expect(screen.getAllByText('Bdim7').length).toBeGreaterThan(0);
   });
 
+  it('toggles note-name visualization when the chord is pressed', () => {
+    renderExplorer();
+    const board = screen.getByRole('button', { name: 'Show notes' });
+    fireEvent.click(board);
+    expect(
+      screen.getByRole('button', { name: 'Show fingering' }),
+    ).toBeInTheDocument();
+  });
+
   it('shows the shape family so chords can slide up the neck', () => {
     renderExplorer();
     // default Am is part of the A-shape minor family Am -> Bm -> Cm

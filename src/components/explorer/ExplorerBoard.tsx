@@ -1,7 +1,10 @@
 'use client';
 
+import { useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChordPosition } from '@/types';
+import { getChordNoteNames } from '@/lib/theory';
 import {
   ChordQuality7,
   IntervalLabel,
@@ -40,7 +43,10 @@ export function ExplorerBoard({
   quality,
   showFingering,
 }: ExplorerBoardProps) {
+  const t = useTranslations('explorer.board');
+  const [showNotes, setShowNotes] = useState(false);
   const intervals = getIntervalLabels(position, rootPc, quality);
+  const noteNames = getChordNoteNames(position);
 
   const fretted = position.frets.filter((f) => f > 0);
   const minFret = fretted.length > 0 ? Math.min(...fretted) : 0;
@@ -64,6 +70,12 @@ export function ExplorerBoard({
 
   return (
     <div className="flex flex-col items-center">
+      <button
+        type="button"
+        onClick={() => setShowNotes((v) => !v)}
+        className="rounded-lg transition-colors hover:bg-mahogany-900/40 active:scale-[0.99]"
+        aria-label={showNotes ? t('show_fingering') : t('show_notes')}
+      >
       <svg
         width={W}
         height={SVG_H}
@@ -120,6 +132,29 @@ export function ExplorerBoard({
             {/* Open / muted markers above the nut */}
             {position.frets.map((fret, s) => {
               if (fret > 0) return null;
+              if (fret === 0 && showNotes && noteNames[s]) {
+                return (
+                  <g key={`mark-${s}`}>
+                    <circle
+                      cx={stringX(s)}
+                      cy={PAD.top - 12}
+                      r={DOT_R - 1}
+                      fill={intervalColor(intervals[s])}
+                    />
+                    <text
+                      x={stringX(s)}
+                      y={PAD.top - 12 + 3}
+                      fill="#1a0d04"
+                      fontSize={8}
+                      fontFamily="JetBrains Mono"
+                      fontWeight="bold"
+                      textAnchor="middle"
+                    >
+                      {noteNames[s]}
+                    </text>
+                  </g>
+                );
+              }
               return (
                 <text
                   key={`mark-${s}`}
@@ -182,17 +217,31 @@ export function ExplorerBoard({
                     {!isBarreDot && (
                       <circle r={DOT_R} fill={intervalColor(label)} />
                     )}
-                    {showFingering && position.fingers[s] > 0 && (
+                    {showNotes && noteNames[s] ? (
                       <text
                         y={3.5}
                         fill="#1a0d04"
-                        fontSize={10}
+                        fontSize={8.5}
                         fontFamily="JetBrains Mono"
                         fontWeight="bold"
                         textAnchor="middle"
                       >
-                        {position.fingers[s]}
+                        {noteNames[s]}
                       </text>
+                    ) : (
+                      showFingering &&
+                      position.fingers[s] > 0 && (
+                        <text
+                          y={3.5}
+                          fill="#1a0d04"
+                          fontSize={10}
+                          fontFamily="JetBrains Mono"
+                          fontWeight="bold"
+                          textAnchor="middle"
+                        >
+                          {position.fingers[s]}
+                        </text>
+                      )
                     )}
                   </motion.g>
                 );
@@ -201,6 +250,7 @@ export function ExplorerBoard({
           </motion.g>
         </g>
       </svg>
+      </button>
 
       {/* Interval (degree) row under the strings — like the worksheet */}
       <svg width={W} height={26} viewBox={`0 0 ${W} 26`}>
@@ -223,6 +273,10 @@ export function ExplorerBoard({
           );
         })}
       </svg>
+
+      <p className="text-[10px] font-mono text-mahogany-500 -mt-1">
+        {showNotes ? t('showing_notes') : t('tap_for_notes')}
+      </p>
     </div>
   );
 }

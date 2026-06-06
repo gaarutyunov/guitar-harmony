@@ -7,6 +7,12 @@
     "songs": "Canciones"
   },
   "explorer": {
+    "board": {
+      "tap_for_notes": "Toca el acorde para ver sus notas",
+      "showing_notes": "Mostrando notas · toca para digitación",
+      "show_notes": "Mostrar notas",
+      "show_fingering": "Mostrar digitación"
+    },
     "quality": {
       "major": "Mayor",
       "minor": "menor",
