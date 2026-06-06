@@ -1,7 +1,7 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import { ExplorerChord, ShapeFamily, getExplorerChord } from '@/data/explorer';
+import { ExplorerChord, ShapeFamily } from '@/data/explorer';
 import { transposedSymbol } from '@/lib/theory/explorer';
 
 interface ShapeFamilyRailProps {
@@ -9,17 +9,20 @@ interface ShapeFamilyRailProps {
   family?: ShapeFamily;
   useBarre: boolean;
   barreFret: number;
-  onSelectMember: (chordId: string) => void;
+  onSelectFret: (fret: number) => void;
   onSlide: (delta: number) => void;
   onUseOpen: () => void;
 }
+
+/** Every position the forma can take in one octave up the neck. */
+const FRET_RANGE = Array.from({ length: 12 }, (_, f) => f);
 
 export function ShapeFamilyRail({
   chord,
   family,
   useBarre,
   barreFret,
-  onSelectMember,
+  onSelectFret,
   onSlide,
   onUseOpen,
 }: ShapeFamilyRailProps) {
@@ -34,8 +37,10 @@ export function ShapeFamilyRail({
     );
   }
 
+  const formaId = chord.formaId;
+  const activeFret = useBarre ? barreFret : chord.rootFret ?? -1;
   const currentSymbol = useBarre
-    ? transposedSymbol(chord.formaId, barreFret, chord.quality)
+    ? transposedSymbol(formaId, barreFret, chord.quality)
     : chord.symbol;
 
   return (
@@ -54,30 +59,22 @@ export function ShapeFamilyRail({
         )}
       </div>
 
-      {/* Member chips — same shape at different positions */}
+      {/* The same shape at every position up the neck */}
       <div className="flex items-center gap-1.5 flex-wrap">
-        {family.members.map((m, i) => {
-          const memberChord = getExplorerChord(m.chordId);
-          const active =
-            useBarre && barreFret === m.rootFret
-              ? true
-              : !useBarre && chord.id === m.chordId;
+        {FRET_RANGE.map((fret) => {
+          const active = fret === activeFret;
           return (
-            <span key={m.chordId} className="flex items-center gap-1.5">
-              <button
-                onClick={() => onSelectMember(m.chordId)}
-                className={`px-2.5 py-1 rounded-md font-mono text-sm font-medium border transition-all active:scale-95 ${
-                  active
-                    ? 'bg-amber-500 text-mahogany-950 border-amber-500'
-                    : 'bg-mahogany-800/30 text-mahogany-200 border-mahogany-700/40 hover:bg-mahogany-800/50'
-                }`}
-              >
-                {memberChord?.symbol ?? m.chordId}
-              </button>
-              {i < family.members.length - 1 && (
-                <span className="text-mahogany-600 text-xs">▸</span>
-              )}
-            </span>
+            <button
+              key={fret}
+              onClick={() => onSelectFret(fret)}
+              className={`px-2 py-1 rounded-md font-mono text-xs font-medium border transition-all active:scale-95 ${
+                active
+                  ? 'bg-amber-500 text-mahogany-950 border-amber-500'
+                  : 'bg-mahogany-800/30 text-mahogany-200 border-mahogany-700/40 hover:bg-mahogany-800/50'
+              }`}
+            >
+              {transposedSymbol(formaId, fret, chord.quality)}
+            </button>
           );
         })}
       </div>
@@ -90,7 +87,7 @@ export function ShapeFamilyRail({
             onClick={() => onSlide(-1)}
             disabled={useBarre && barreFret <= 0}
             className="w-8 h-8 rounded-lg bg-mahogany-800/40 text-mahogany-200 font-bold disabled:opacity-30 hover:bg-mahogany-700/50 active:scale-95"
-            aria-label="slide down the neck"
+            aria-label="slide toward the nut"
           >
             ▲
           </button>

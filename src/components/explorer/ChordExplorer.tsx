@@ -3,7 +3,6 @@
 import { useState } from 'react';
 import { useSettingsStore } from '@/stores/useSettingsStore';
 import {
-  ChordQuality7,
   RootLetter,
   ToggleQuality,
   formaRootPc,
@@ -11,7 +10,6 @@ import {
 } from '@/lib/theory/explorer';
 import {
   getBarreVoicing,
-  getExplorerChord,
   getFamily,
   hasSeventhAlt,
   resolveChord,
@@ -22,12 +20,6 @@ import { QualityToggle } from './QualityToggle';
 import { ExplorerBoard } from './ExplorerBoard';
 import { IntervalRuler } from './IntervalRuler';
 import { ShapeFamilyRail } from './ShapeFamilyRail';
-
-function toToggle(q: ChordQuality7): ToggleQuality {
-  if (q === 'major') return 'major';
-  if (q === 'minor') return 'minor';
-  return 'seventh';
-}
 
 export function ChordExplorer() {
   const showFingering = useSettingsStore((s) => s.showFingering);
@@ -72,14 +64,8 @@ export function ChordExplorer() {
     // Keep useBarre so major <-> minor at the same barre fret morphs cleanly.
   }
 
-  function selectMember(chordId: string) {
-    const member = family?.members.find((m) => m.chordId === chordId);
-    const memberChord = getExplorerChord(chordId);
-    if (!member || !memberChord) return;
-    setRoot(memberChord.rootLetter);
-    setQuality(toToggle(memberChord.quality));
-    setAltB(false);
-    setBarreFret(member.rootFret);
+  function selectFret(fret: number) {
+    setBarreFret(fret);
     setUseBarre(true);
   }
 
@@ -121,7 +107,7 @@ export function ChordExplorer() {
         family={family}
         useBarre={useBarre}
         barreFret={barreFret}
-        onSelectMember={selectMember}
+        onSelectFret={selectFret}
         onSlide={slide}
         onUseOpen={() => setUseBarre(false)}
       />
