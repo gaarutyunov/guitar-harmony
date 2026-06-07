@@ -1,9 +1,45 @@
 {
   "tabs": {
     "table": "Table",
+    "explore": "Explore",
     "harmony": "Harmony",
     "saved": "Saved",
     "songs": "Songs"
+  },
+  "explorer": {
+    "board": {
+      "tap_for_notes": "Tap the chord to see its notes",
+      "showing_notes": "Showing notes · tap for fingering",
+      "show_notes": "Show notes",
+      "show_fingering": "Show fingering"
+    },
+    "quality": {
+      "major": "Major",
+      "minor": "minor",
+      "seventh": "7th"
+    },
+    "ruler": {
+      "title": "Seventh rule",
+      "triad": "Triad — 3 notes (1 · 3 · 5).",
+      "seventh_intro": "Four notes.",
+      "rule_maj7": "The major 7th sits a semitone (½) below the octave.",
+      "rule_flat7": "The ♭7 sits a whole tone below the octave — minor lowers one tone, major a semitone.",
+      "rule_dim7": "The °7 sits a tone and a half below the octave."
+    },
+    "family": {
+      "title": "Family",
+      "use_open": "open shape",
+      "slide_hint": "Slide the shape up/down the neck",
+      "not_movable": "Open voicing — this shape doesn't move up the neck.",
+      "forma": {
+        "min_E": "minor · E-shape",
+        "min_A": "minor · A-shape",
+        "maj_E": "Major · E-shape",
+        "maj_A": "Major · A-shape",
+        "maj7_A": "maj7 · A-shape",
+        "m7_A": "m7 · A-shape"
+      }
+    }
   },
   "table": {
     "mode_major": "Major",
